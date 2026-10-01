@@ -230,7 +230,7 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
 <form onsubmit="crearPrestamo(event)">
 <label>Cliente</label><select id="pcliente" required></select>
 <label>Capital prestado (S/)</label><input id="monto" type="number" min="1" step="0.01" required>
-<label>Interés</label><select id="interes"><option value="10">10%</option><option value="15">15%</option><option value="20">20%</option></select>
+<label>Interés</label><select id="interes"><option value="0">0%</option><option value="5">5%</option><option value="10">10%</option><option value="15">15%</option><option value="20">20%</option></select>
 <label>Modalidad</label><select id="modalidad"><option value="24">Diario · 24 días</option><option value="30">Diario · 30 días</option><option value="1">Semanal · 1 semana</option><option value="2">Semanal · 2 semanas</option><option value="3">Semanal · 3 semanas</option><option value="4">Semanal · 4 semanas</option></select>
 <div class="card" style="margin-top:14px;padding:14px;background:#f8fafc;border:1px solid #e5e7eb">
   <h3 style="margin:0 0 10px">📅 Fechas del crédito</h3>
@@ -253,7 +253,7 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
 <div class="card" style="margin-top:12px;border:1px solid #dbe4f2;background:linear-gradient(135deg,#f8fbff,#ffffff);cursor:pointer" onclick="document.getElementById('seguridad').scrollIntoView({behavior:'smooth'})">
   <div style="font-size:20px;font-weight:800">🛡️ Seguridad y respaldo</div>
   <div class="small" style="margin-top:4px">Guarda o recupera una copia de todos tus datos.</div>
-  <button class="btn primary" style="width:100%;margin-top:10px" onclick="event.stopPropagation();hacerBackup()">💾 Crear backup ahora</button>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px"><button class="btn primary" onclick="event.stopPropagation();hacerBackup()">💾 Crear backup</button><button class="btn" onclick="event.stopPropagation();document.getElementById('archivoBackup').click()">♻️ Restaurar</button></div>
 </div>
 
 <section id="seguridad" class="card" style="margin-top:12px">
@@ -397,10 +397,17 @@ function retirarCapital(){
 function dateStr(d){return d.toISOString().slice(0,10)}
 function addDays(d,n){let x=new Date(d);x.setDate(x.getDate()+n);return x}
 function nextCobro(d){let x=new Date(d);x.setDate(x.getDate()+1);while(x.getDay()==0)x.setDate(x.getDate()+1);return x}
+function limpiarFormularioCredito(){
+ const form=document.querySelector('#nuevo form');
+ if(form)form.reset();
+ const box=document.getElementById('vistaPreviaCronograma');
+ if(box)box.innerHTML='<b>👁️ Vista previa del cronograma</b><p class="small">Completa monto y fechas para ver el cronograma.</p>';
+}
 function show(id){
  document.querySelectorAll('section').forEach(s=>s.classList.remove('active-section'));
  document.getElementById(id).classList.add('active-section');
  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+ if(id==='nuevo')limpiarFormularioCredito();
  render();
  if(id==='nuevo'){fillClientes();prepararFechasCredito();actualizarVistaPreviaCronograma();}
 }
@@ -1009,7 +1016,7 @@ function enviarNotificacion(tipo){
      ? `Hola ${c.nombre}, te informamos que tu saldo pendiente al ${fecha} es de ${money(saldo)}. Gracias.`
      : tipo==='semanal'
      ? `Hola ${c.nombre}, te recordamos que tienes un pago pendiente correspondiente a tu crédito. Por favor, realiza tu pago semanal en la fecha acordada. Tu saldo pendiente es de ${money(saldo)}. Gracias.`
-     : `Hola ${c.nombre}, te informamos que actualmente tienes un saldo pendiente de ${money(saldo)} y tu crédito se encuentra atrasado. Por favor, ponte al día con tu pago. Fecha: ${fecha}. Gracias.`;
+     : `Hola ${c.nombre}, te informamos que tu crédito se encuentra atrasado y tienes un saldo pendiente de ${money(saldo)}. Por favor, ponte al día con tu pago. Gracias.`;
    return abrirWhatsApp(c,mensaje);
  }
  let saldo=p.pendiente;
@@ -1026,7 +1033,7 @@ function enviarNotificacion(tipo){
  }else if(tipo==='semanal'){
    mensaje=`Hola ${c.nombre}, te recordamos que tienes un pago pendiente de tu ${tipoCredito}. Tu saldo pendiente es de ${money(saldo)}. Por favor, realiza tu pago en la fecha acordada. Gracias.`;
  }else{
-   mensaje=`Hola ${c.nombre}, te informamos que tu ${tipoCredito} tiene un saldo pendiente de ${money(saldo)} y se encuentra atrasado. Por favor, ponte al día con tu pago. Fecha: ${fecha}. Gracias.`;
+   mensaje=`Hola ${c.nombre}, te informamos que tu ${tipoCredito} se encuentra atrasado y tienes un saldo pendiente de ${money(saldo)}. Por favor, ponte al día con tu pago. Gracias.`;
  }
  abrirWhatsApp(c,mensaje);
  cerrarNotificaciones();
