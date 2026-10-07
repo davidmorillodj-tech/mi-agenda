@@ -126,6 +126,17 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
   <button class="btn" style="box-shadow:none;background:none;color:#1456d8;padding:6px" onclick="show('cobros')">Ver todos ›</button>
 </div>
 <div id="cobrosHoy" class="list"></div>
+
+<!-- Seguridad y respaldo: acceso visible desde Inicio -->
+<section id="seguridadInicio" class="card" style="margin-top:14px">
+  <h3 style="margin:0 0 6px">🛡️ Seguridad y respaldo</h3>
+  <div class="small" style="margin-bottom:10px">Crea una copia de todos tus clientes, créditos, pagos y movimientos para poder recuperarlos si cambias de teléfono o borras el navegador.</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <button class="btn primary" type="button" onclick="hacerBackup()">💾 Crear backup</button>
+    <button class="btn" type="button" onclick="document.getElementById('archivoBackup').click()">♻️ Recuperar backup</button>
+  </div>
+  <div id="backupInfo" class="small" style="margin-top:9px;opacity:.75"></div>
+</section>
 </section>
 
 <section id="zonas">
@@ -256,16 +267,7 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
 <h2>Cobros</h2><div id="listaCobros" class="list"></div>
 </section>
 
-<section id="seguridad" class="card" style="margin-top:12px">
-<h3 style="margin:0 0 6px">🛡️ Seguridad y respaldo</h3>
-<div class="small" style="margin-bottom:10px">Guarda una copia de tus datos para poder recuperarlos si cambias de teléfono, borras el navegador o ocurre algún fallo.</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-<button class="btn primary" onclick="hacerBackup()">💾 Crear backup</button>
-<button class="btn" onclick="document.getElementById('archivoBackup').click()">♻️ Recuperar datos</button>
-</div>
 <input id="archivoBackup" type="file" accept="application/json,.json" style="display:none" onchange="recuperarBackup(event)">
-<div id="backupInfo" class="small" style="margin-top:9px;opacity:.75"></div>
-</section>
 
 <section id="creditosHoy">
 <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
