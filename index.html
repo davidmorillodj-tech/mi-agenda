@@ -330,6 +330,20 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
 
   <div id="reporteResumen" style="margin-top:12px"></div>
   <div id="reporteContenido"></div>
+
+  <div id="seguridadReporteDetalle" class="card no-print" style="margin-top:14px;border:2px solid #3157d5;background:linear-gradient(135deg,#f5f8ff,#ffffff)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="font-size:28px">🛡️</div>
+      <div>
+        <h3 style="margin:0;font-size:19px">Seguridad y respaldo</h3>
+        <div class="small">Guarda una copia completa de Mi Agenda o recupera una copia anterior.</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn primary" type="button" onclick="hacerBackup()">💾 Crear backup</button>
+      <button class="btn" type="button" onclick="document.getElementById('archivoBackup').click()">♻️ Recuperar backup</button>
+    </div>
+  </div>
 </section>
 
 <div id="reportePreviewModal" onclick="if(event.target===this)cerrarVistaPrevia()">
@@ -383,7 +397,7 @@ function hacerBackup(){
   const respaldo={app:'Mi Agenda',version:1,fecha:new Date().toISOString(),datos:db};
   const blob=new Blob([JSON.stringify(respaldo,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob); const a=document.createElement('a');
-  const f=new Date().toISOString().slice(0,10); a.href=url; a.download='mi_agenda_backup_'+f+'.json';
+  const f=dateStr(new Date()); a.href=url; a.download='mi_agenda_backup_'+f+'.json';
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   document.getElementById('backupInfo').textContent='Backup creado: '+new Date().toLocaleString();
 }
@@ -422,7 +436,7 @@ function retirarCapital(){
  save();
  alert('Retiro registrado: '+money(val)+'\nCapital disponible: '+money(db.capital));
 }
-function dateStr(d){return d.toISOString().slice(0,10)}
+function dateStr(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function addDays(d,n){let x=new Date(d);x.setDate(x.getDate()+n);return x}
 function nextCobro(d){let x=new Date(d);x.setDate(x.getDate()+1);while(x.getDay()==0)x.setDate(x.getDate()+1);return x}
 function show(id){
@@ -509,7 +523,7 @@ function crearPrestamo(e){
  }
  let total=Math.round(capital*(1+pct/100)), cuota=Math.floor(total/n);
  let p={id:Date.now(),clienteId:+pcliente.value,capital,pct,total,n,semanal,cuota,inicio:fechaCreacion,pagadas:0,pendiente:total,cuotas:[]};
- let d=new Date(dp);
+ let d=new Date(dp+'T00:00:00');
  for(let i=0;i<n;i++){
    while(d.getDay()===0)d.setDate(d.getDate()+1);
    let montoCuota=(i===n-1)?(total-cuota*(n-1)):cuota;
@@ -547,7 +561,8 @@ function cobrar(pid,i){
    cuotaInicial:q.i
  });
  save();
- let nuevoSaldo=+(saldo-aplicado);
+ let c=cliente(p.clienteId);
+ let nuevoSaldo=+(p.pendiente||0);
  let fechaPago=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
  let mensaje=`Hola ${c.nombre}, recibimos tu pago de ${money(aplicado)} con fecha ${fechaPago}. Tu saldo pendiente es de ${money(nuevoSaldo)}. Gracias.`;
  let enviar=confirm(`Pago registrado: ${money(aplicado)}\\nSaldo pendiente: ${money(nuevoSaldo)}\\n\\n¿Quieres enviarle su saldo por WhatsApp?`);
