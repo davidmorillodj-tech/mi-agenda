@@ -826,6 +826,17 @@ function render(){
  }).join('')||'<div class="row">Sin movimientos.</div>';
  reportesBox.innerHTML=`<b>Resumen</b><p>Clientes: ${db.clientes.length}</p><p>Préstamos activos: ${db.prestamos.filter(p=>p.pendiente>0).length}</p><p>Préstamos terminados: ${db.prestamos.filter(p=>p.pendiente<=0.005).length}</p><p>Capital disponible: <b>${money(db.capital)}</b></p><p>Total pendiente: <b>${money(pend)}</b></p>`;
 }
+function estadoCredito(p, hoy=dateStr(new Date())){
+ const cuotas=Array.isArray(p.cuotas)?p.cuotas:[];
+ const pendientes=cuotas.filter(q=>Number(q.pagado||0)<Number(q.monto||0)-0.005);
+ if(!pendientes.length || Number(p.pendiente||0)<=0.005) return {tipo:'terminado',texto:'Terminado',clase:'paid'};
+ const ultimaFecha=cuotas.reduce((max,q)=>q.fecha>max?q.fecha:max,'');
+ if(ultimaFecha && hoy>ultimaFecha) return {tipo:'vencido',texto:'Crédito vencido',clase:'late',fecha:ultimaFecha};
+ const atrasadas=pendientes.filter(q=>q.fecha<hoy);
+ if(atrasadas.length) return {tipo:'atrasado',texto:'Atrasado',clase:'late',atrasadas:atrasadas.length};
+ return {tipo:'vigente',texto:'Vigente',clase:'pending'};
+}
+
 function renderClientes(){
  let q=(document.getElementById('buscarCliente')?.value||'').trim().toLowerCase();
  let list=db.clientes.filter(c=>c.nombre.toLowerCase().includes(q));
@@ -914,9 +925,11 @@ function verCliente(id){
  mostrarTabCredito('cuotas');
  const tarjetaCredito=p=>{
    let abiertas=p.cuotas.filter(q=>Number(q.pagado||0)<Number(q.monto||0)-0.005);
-   return `<div class="row"><div><b>Préstamo ${money(p.capital)} · ${p.pct}%</b>
-     <div class="small">${p.semanal?'Semanal':'Diario'} · ${p.n} ${p.semanal?'semana(s)':'días'} · Pendiente ${money(p.pendiente)}</div>
-     <div class="small">${abiertas.length} cuota(s) pendiente(s)</div></div>
+   const estado=estadoCredito(p);
+   const detalleEstado=estado.tipo==='vencido' ? ` · Venció el ${fmtFecha(estado.fecha)}` : (estado.tipo==='atrasado' ? ` · ${estado.atrasadas} cuota(s) atrasada(s)` : '');
+   return `<div class="row"><div><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><b>Préstamo ${money(p.capital)} · ${p.pct}%</b><span class="badge ${estado.clase}">${estado.texto}</span></div>
+     <div class="small">${p.semanal?'Semanal':'Diario'} · ${p.n} ${p.semanal?'semana(s)':'días'} · Pendiente ${money(p.pendiente)}${detalleEstado}</div>
+     <div class="small">📅 Creado: ${fmtFecha(p.inicio)||'—'} · ${abiertas.length} cuota(s) pendiente(s)</div></div>
      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
        <button class="btn" onclick="verCuotas(${p.id})">Ver cuotas</button>
        <button class="btn" style="border:1px solid #f0b8be;color:#c62838;background:#fff5f6" onclick="eliminarCredito(${p.id})">🗑️</button>
@@ -1323,7 +1336,10 @@ function verCuotas(pid){
  if(!p)return;
  let c=cliente(p.clienteId);
  detalleNombre.textContent=`${c.nombre} · Cuotas`;
- detalleDatos.innerHTML=`<b>Capital:</b> ${money(p.capital)} · <b>Total:</b> ${money(p.total)} · <b>Saldo de este crédito:</b> ${money(p.pendiente)}`;
+ const estado=estadoCredito(p);
+ const vencimiento=Array.isArray(p.cuotas)&&p.cuotas.length?p.cuotas.reduce((max,q)=>q.fecha>max?q.fecha:max,''):'';
+ const lineaEstado=estado.tipo==='vencido' ? `<div style="margin-top:7px;color:#c62838;font-weight:800">🔴 Crédito vencido · Venció el ${fmtFecha(vencimiento)}</div>` : estado.tipo==='atrasado' ? `<div style="margin-top:7px;color:#b26a00;font-weight:800">🟡 Atrasado · ${estado.atrasadas} cuota(s) vencida(s)</div>` : estado.tipo==='vigente' ? `<div style="margin-top:7px;color:#078453;font-weight:800">🟢 Crédito vigente</div>` : `<div style="margin-top:7px;color:#078453;font-weight:800">✅ Crédito terminado</div>`;
+ detalleDatos.innerHTML=`<b>Creado:</b> ${fmtFecha(p.inicio)||'—'} · <b>Capital:</b> ${money(p.capital)} · <b>Total:</b> ${money(p.total)} · <b>Saldo de este crédito:</b> ${money(p.pendiente)} ${lineaEstado}`;
  detallePrestamos.innerHTML=`
  <div class="card" style="margin-bottom:10px">
    <div class="small">Este saldo corresponde únicamente a este crédito.</div>
