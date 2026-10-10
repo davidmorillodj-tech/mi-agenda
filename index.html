@@ -34,7 +34,9 @@ form{background:#fff;padding:18px;border-radius:20px;box-shadow:0 5px 18px #173d
 .stat-green{border-color:#d4f1e5}.stat-green b{color:#0aa875}
 .stat-orange{border-color:#f5e6bf}.stat-orange b{color:#e39a00}
 .stat-red{border-color:#f4d9dd}.stat-red b{color:#d94250}
-.report-toolbar{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:10px 0}.report-toolbar .btn{padding:11px 6px}.report-table{width:100%;border-collapse:collapse;min-width:650px;font-size:12px}.report-table th{background:#172b46;color:#fff;padding:8px;text-align:left}.report-table td{padding:7px;border-bottom:1px solid #e5e9ef}.report-table td.num,.report-table th.num{text-align:right}.report-total{background:#dff8ec;font-weight:700}.report-blue{background:#dceeff}.report-card{overflow:auto;border:1px solid #e0e6ef;border-radius:12px;margin-top:12px}.report-stat{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border:1px solid #aeb4c8;border-radius:14px;overflow:hidden;background:#f8f7ff}.report-stat>div{padding:13px 8px;text-align:center;border-right:1px solid #9ca3bd}.report-stat>div:last-child{border-right:0}.report-stat b{display:block;font-size:18px;margin-bottom:4px}.report-stat span{font-size:11px;color:#707b8d}.report-head{background:#172b46;color:#fff;border-radius:0 0 24px 24px;padding:20px 18px}.report-head h2{margin:0 0 5px;color:#fff}.report-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.report-date-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}.report-note{font-size:11px;color:#6b7485;margin-top:8px}@media(max-width:600px){.report-toolbar{grid-template-columns:repeat(3,1fr)}.report-stat{grid-template-columns:repeat(2,1fr)}.report-stat>div:nth-child(2n){border-right:0}.report-stat>div{border-bottom:1px solid #9ca3bd}.report-date-fields{grid-template-columns:1fr}.report-table{font-size:11px}}
+.report-toolbar{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:10px 0}.report-toolbar .btn{padding:11px 6px}.report-table{width:100%;border-collapse:collapse;min-width:650px;font-size:12px}.report-table th{background:#172b46;color:#fff;padding:8px;text-align:left}.report-table td{padding:7px;border-bottom:1px solid #e5e9ef}.report-table td.num,.report-table th.num{text-align:right}.report-total{background:#dff8ec;font-weight:700}.report-blue{background:#dceeff}.report-card{overflow:auto;border:1px solid #e0e6ef;border-radius:12px;margin-top:12px}.report-stat{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border:1px solid #aeb4c8;border-radius:14px;overflow:hidden;background:#f8f7ff}.report-stat>div{padding:13px 8px;text-align:center;border-right:1px solid #9ca3bd}.report-stat>div:last-child{border-right:0}.report-stat b{display:block;font-size:18px;margin-bottom:4px}.report-stat span{font-size:11px;color:#707b8d}.report-head{background:#172b46;color:#fff;border-radius:0 0 24px 24px;padding:20px 18px}.report-head h2{margin:0 0 5px;color:#fff}.report-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.report-date-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}.report-note{font-size:11px;color:#6b7485;margin-top:8px}.summary-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.summary-pair>.card{margin:0;min-width:0}
+@media(max-width:600px){.summary-pair{grid-template-columns:1fr}}
+@media(max-width:600px){.report-toolbar{grid-template-columns:repeat(3,1fr)}.report-stat{grid-template-columns:repeat(2,1fr)}.report-stat>div:nth-child(2n){border-right:0}.report-stat>div{border-bottom:1px solid #9ca3bd}.report-date-fields{grid-template-columns:1fr}.report-table{font-size:11px}}
 #reportePreviewModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:100;overflow:auto;padding:18px}.preview-shell{max-width:900px;margin:0 auto;background:#fff;border-radius:14px;min-height:90vh;box-shadow:0 15px 45px rgba(0,0,0,.35)}.preview-top{position:sticky;top:0;z-index:2;background:#fff;border-bottom:1px solid #e4e7ee;padding:12px 14px;display:flex;gap:8px;justify-content:space-between;align-items:center}.preview-actions{display:flex;gap:7px}.preview-body{padding:16px}.preview-label{font-size:12px;color:#697386;margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 @media print{body{background:#fff!important}.container{padding:0!important;max-width:none!important}body>header,body>nav,.container>section:not(#reporteDetalle){display:none!important}#reporteDetalle{display:block!important;position:static!important;box-shadow:none!important;padding:0!important;margin:0!important}.no-print{display:none!important}.report-head{border-radius:0!important}.report-card{overflow:visible!important;border:0!important}.report-table{min-width:0!important;font-size:10px}.report-table th,.report-table td{padding:5px}.report-note{font-size:9px}}
 @media(max-width:520px){.dashboard-stats{gap:7px}.stat-box{padding:12px 4px}.stat-box b{font-size:22px}.stat-box span{font-size:11px}}
@@ -59,7 +61,10 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
 
 <section id="inicio" class="active-section">
 <div class="grid">
-<div class="card blue"><div class="label">Capital disponible</div><div class="money" id="capital">S/ 0.00</div>
+<div class="card blue">
+  <div class="label">Capital disponible</div>
+  <div class="money" id="capital">S/ 0.00</div>
+  <div class="small" style="margin-top:8px">Saldo en mora <b id="saldoMoraCapital">S/ 0.00</b></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px">
     <button class="btn success" onclick="ingresarCapital()">➕ Ingresar capital</button>
     <button class="btn warn" onclick="retirarCapital()">➖ Retiro / gasto</button>
@@ -76,10 +81,10 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
     <div class="small" style="margin-top:3px;color:#fff;opacity:.9">Cuotas programadas para hoy</div>
   </div>
 </div>
-<div class="card"><div class="label">Saldo en mora</div><div class="money" id="saldoMora">S/ 0.00</div></div>
 </div>
 
-<div class="card" style="margin-top:12px">
+<div class="summary-pair">
+<div class="card">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
     <div>
       <b style="font-size:18px">💳 Total en créditos</b>
@@ -87,6 +92,7 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
     </div>
     <div class="money" id="pendiente" style="color:#1456d8">S/ 0.00</div>
   </div>
+</div>
 </div>
 
 <div class="card" style="margin-top:12px;border:2px solid #1456d8;background:linear-gradient(135deg,#f4f8ff,#fff)">
@@ -127,15 +133,15 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
 <div id="cobrosHoy" class="list"></div>
 
 <!-- Seguridad y respaldo: acceso visible desde Inicio -->
-<section id="seguridadInicio" class="card" style="margin-top:24px;margin-bottom:6px">
+<div id="seguridadInicio" class="card" style="margin-top:18px;margin-bottom:18px">
   <h3 style="margin:0 0 6px">🛡️ Seguridad y respaldo</h3>
   <div class="small" style="margin-bottom:10px">Crea una copia de todos tus clientes, créditos, pagos y movimientos para poder recuperarlos si cambias de teléfono o borras el navegador.</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-    <button class="btn primary" type="button" onclick="hacerBackup()">💾 Crear backup</button>
-    <button class="btn" type="button" onclick="document.getElementById('archivoBackup').click()">♻️ Recuperar backup</button>
+    <button class="btn primary" type="button" onclick="hacerBackup();return false">💾 Crear backup</button>
+    <button class="btn" type="button" onclick="const f=document.getElementById('archivoBackup');f.value='';f.click();return false">♻️ Recuperar backup</button>
   </div>
   <div id="backupInfo" class="small" style="margin-top:9px;opacity:.75"></div>
-</section>
+</div>
 </section>
 
 <section id="zonas">
@@ -381,7 +387,7 @@ function hacerBackup(){
   const blob=new Blob([JSON.stringify(respaldo,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob); const a=document.createElement('a');
   const f=new Date().toISOString().slice(0,10); a.href=url; a.download='mi_agenda_backup_'+f+'.json';
-  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
   document.getElementById('backupInfo').textContent='Backup creado: '+new Date().toLocaleString();
 }
 function recuperarBackup(ev){
@@ -799,7 +805,7 @@ function render(){
    const terminados=db.prestamos.filter(p=>p.pendiente<=0.005);
    document.getElementById('historicoDetalle').textContent=`${db.prestamos.length} crédito(s) registrados · ${activos.length} activo(s) · ${terminados.length} terminado(s). Este dato es histórico y no modifica ni recalcula tus préstamos.`;
  }
- document.getElementById('saldoMora').textContent=money(saldoMora);
+ const moraCapital=document.getElementById('saldoMoraCapital'); if(moraCapital)moraCapital.textContent=money(saldoMora);
  document.getElementById('totalClientes').textContent=db.clientes.length;
  document.getElementById('clientesDia').textContent=clientesDia;
  document.getElementById('clientesAtrasados').textContent=clientesAtrasados.size;
