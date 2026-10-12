@@ -544,48 +544,35 @@ function crearPrestamo(e){
  }
 }
 function cliente(id){return db.clientes.find(c=>c.id===id)||{nombre:'Cliente eliminado'}}
-function cobrar(pid,i){
+function registrarPagoCredito(pid,i){
  let p=db.prestamos.find(x=>x.id===pid), q=p?.cuotas[i]; if(!p||!q)return;
- let pendienteInicial=p.cuotas.reduce((s,x)=>s+Math.max(0,x.monto-x.pagado),0);
- let val=prompt(`Pago recibido de ${cliente(p.clienteId).nombre}.\nCuota ${q.i}: ${money(Math.max(0,q.monto-q.pagado))}\n\nPuedes registrar el monto REAL que entregó el cliente. Si paga más, el excedente se aplicará automáticamente a las siguientes cuotas.`, '');
- if(val===null)return; val=Math.round(+val);if(!(val>0))return;
- let recibido=Math.min(val,pendienteInicial), restante=recibido, aplicado=0;
- // El pago se distribuye desde la cuota seleccionada hacia las siguientes.
+ let c=cliente(p.clienteId);
+ let pendienteCredito=p.cuotas.reduce((s,x)=>s+Math.max(0,x.monto-x.pagado),0);
+ let val=prompt(`Pago recibido de ${c.nombre}.\nCuota ${q.i}: ${money(Math.max(0,q.monto-q.pagado))}\nSaldo de ESTE crédito: ${money(pendienteCredito)}\n\nPuedes registrar el monto REAL que entregó el cliente. Si paga más, el excedente se aplicará automáticamente a las siguientes cuotas de este crédito.`, '');
+ if(val===null)return;
+ val=Math.round(+val); if(!(val>0))return;
+ let recibido=Math.min(val,pendienteCredito), restante=recibido, aplicado=0;
  for(let j=i;j<p.cuotas.length && restante>0.005;j++){
    let cuota=p.cuotas[j], falta=Math.max(0,cuota.monto-cuota.pagado);
    if(falta<=0.005)continue;
    let usar=Math.min(restante,falta);
    cuota.pagado=+(cuota.pagado+usar);
    cuota.estado=cuota.pagado>=cuota.monto-0.005?'pagado':'parcial';
-   restante=+(restante-usar);
-   aplicado=+(aplicado+usar);
+   restante=+(restante-usar); aplicado=+(aplicado+usar);
  }
  p.pendiente=+(p.cuotas.reduce((s,x)=>s+Math.max(0,x.monto-x.pagado),0));
+ p.pagadas=p.cuotas.filter(x=>x.pagado>=x.monto-0.005).length;
  db.capital+=aplicado;
- db.pagos.push({
-   id:Date.now(),
-   fecha:dateStr(new Date()),
-   clienteId:p.clienteId,
-   monto:aplicado,
-   recibido:+val,
-   pid,
-   cuotaInicial:q.i
- });
+ db.pagos.push({id:Date.now(),fecha:dateStr(new Date()),clienteId:p.clienteId,monto:aplicado,recibido:+val,pid:p.id,cuotaInicial:q.i});
  save();
- let nuevoSaldo=+(saldo-aplicado);
  let fechaPago=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
- let mensaje=`Hola ${c.nombre}, recibimos tu pago de ${money(aplicado)} con fecha ${fechaPago}. Tu saldo pendiente es de ${money(nuevoSaldo)}. Gracias.`;
- let enviar=confirm(`Pago registrado: ${money(aplicado)}\\nSaldo pendiente: ${money(nuevoSaldo)}\\n\\n¿Quieres enviarle su saldo por WhatsApp?`);
- if(enviar){
-   let telefono=(c.tel||'').replace(/\\D/g,'');
-   if(telefono.length){
-     let numero=telefono.startsWith('51')?telefono:'51'+telefono;
-     window.open('https://wa.me/'+numero+'?text='+encodeURIComponent(mensaje),'_blank');
-   }else{
-     alert('Este cliente no tiene un número de teléfono registrado.');
-   }
- }
+ let mensaje=`Hola ${c.nombre}, recibimos tu pago de ${money(aplicado)} con fecha ${fechaPago}. El saldo pendiente de este crédito es de ${money(p.pendiente)}. Gracias.`;
+ document.getElementById('pagoResultadoTexto').innerHTML=`<p><b>Cliente:</b> ${c.nombre}</p><p><b>Crédito:</b> ${p.semanal?'Semanal':'Diario'} · ${p.n} ${p.semanal?'semana(s)':'días'}</p><p><b>Pago recibido:</b> ${money(aplicado)}</p><p><b>Saldo de este crédito:</b> <strong>${money(p.pendiente)}</strong></p><p class="small">Fecha: ${fechaPago}</p>`;
+ document.getElementById('btnEnviarSaldo').onclick=()=>abrirWhatsApp(c,mensaje);
+ document.getElementById('pagoResultado').style.display='flex';
+ creditoActualId=p.id; verCuotas(p.id);
 }
+function cobrar(pid,i){ registrarPagoCredito(pid,i); }
 function abrirReporteCobradoHoy(){
   reporteConfig={tipo:'hoy',modo:'general',desde:dateStr(new Date()),hasta:dateStr(new Date())};
   show('reporteDetalle');
@@ -1167,54 +1154,15 @@ function cobrarCliente(){
  if(clienteActualId===null)return;
  let ps=db.prestamos.filter(p=>p.clienteId===clienteActualId && p.pendiente>0.005);
  if(!ps.length){alert('Este cliente no tiene saldo pendiente.');return;}
- let saldo=ps.reduce((s,p)=>s+p.pendiente,0);
- let c=cliente(clienteActualId);
- let val=prompt(`Pago de ${c.nombre}\nSaldo pendiente total: ${money(saldo)}\n\nEscribe el monto REAL que entrega el cliente:`, '');
- if(val===null)return;
- val=Math.round(+val);
- if(!(val>0))return;
- let restante=Math.min(val,saldo), aplicado=0, registros=[];
- // Distribute the payment through the client's open loans and keep one payment
- // record per credit, so each credit's Abono tab only shows its own movements.
- for(let p of ps){
-   let aplicadoCredito=0;
-   for(let q of p.cuotas){
-     if(restante<=0.005)break;
-     let falta=Math.max(0,q.monto-q.pagado);
-     if(falta<=0.005)continue;
-     let usar=Math.min(restante,falta);
-     q.pagado=+(q.pagado+usar);
-     q.estado=q.pagado>=q.monto-0.005?'pagado':'parcial';
-     restante=+(restante-usar);
-     aplicado=+(aplicado+usar);
-     aplicadoCredito=+(aplicadoCredito+usar);
-   }
-   p.pendiente=+(p.cuotas.reduce((s,x)=>s+Math.max(0,x.monto-x.pagado),0));
-   if(aplicadoCredito>0.005){
-     registros.push({id:Date.now()+registros.length,fecha:dateStr(new Date()),clienteId:clienteActualId,monto:aplicadoCredito,recibido:aplicadoCredito,pid:p.id,cuotaInicial:1,clienteDirecto:true});
-   }
- }
- db.capital+=aplicado;
- db.pagos.push(...registros);
- save();
- let nuevoSaldo=+(saldo-aplicado);
- let fechaPago=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
- let mensaje=`Hola ${c.nombre}, recibimos tu pago de ${money(aplicado)} con fecha ${fechaPago}. Tu saldo pendiente es de ${money(nuevoSaldo)}. Gracias.`;
- document.getElementById('pagoResultadoTexto').innerHTML=
-   `<p><b>Cliente:</b> ${c.nombre}</p>
-    <p><b>Pago recibido:</b> ${money(aplicado)}</p>
-    <p><b>Saldo pendiente:</b> <strong>${money(nuevoSaldo)}</strong></p>
-    <p class="small">Fecha: ${fechaPago}</p>`;
- document.getElementById('btnEnviarSaldo').onclick=()=>{
-   let telefono=(c.tel||'').replace(/\D/g,'');
-   if(!telefono.length){alert('Este cliente no tiene un número de teléfono registrado.');return;}
-   let numero=telefono.startsWith('51')?telefono:'51'+telefono;
-   window.open('https://wa.me/'+numero+'?text='+encodeURIComponent(mensaje),'_blank');
- };
- document.getElementById('pagoResultado').style.display='flex';
- verCliente(clienteActualId);
+ if(ps.length===1){verCuotas(ps[0].id);setTimeout(()=>cobrarCredito(ps[0].id),0);return;}
+ const c=cliente(clienteActualId);
+ const opciones=ps.map((p,i)=>`${i+1}. ${p.semanal?'Semanal':'Diario'} · ${p.n} ${p.semanal?'semana(s)':'días'} · Creado ${fmtFecha(p.inicio)} · Saldo ${money(p.pendiente)}`).join('\n');
+ const eleccion=prompt(`El cliente ${c.nombre} tiene ${ps.length} créditos activos.\n\nSelecciona a cuál crédito aplicar el pago:\n\n${opciones}\n\nEscribe el número del crédito:`, '1');
+ if(eleccion===null)return;
+ const idx=Math.round(+eleccion)-1;
+ if(idx<0||idx>=ps.length)return alert('Selecciona un número de crédito válido.');
+ cobrarCredito(ps[idx].id);
 }
-
 function cerrarPagoResultado(){
  document.getElementById('pagoResultado').style.display='none';
 }
