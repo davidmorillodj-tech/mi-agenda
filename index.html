@@ -465,9 +465,14 @@ function crearCreditoNuevoCliente(){
  document.getElementById('creditoModal').style.display='none';
  show('nuevo');
  fillClientes();
- pcliente.value=nuevoClienteId;
+ const sel=document.getElementById('pcliente');
+ if(sel && nuevoClienteId!==null) sel.value=String(nuevoClienteId);
 }
-function fillClientes(){pcliente.innerHTML=db.clientes.length?db.clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join(''):'<option value="">Primero crea un cliente</option>'}
+function fillClientes(){
+ const sel=document.getElementById('pcliente');
+ if(!sel)return;
+ sel.innerHTML=db.clientes.length?db.clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join(''):'<option value="">Primero crea un cliente</option>';
+}
 function fechaCreacionInput(){return document.getElementById('fechaCreacion')?.value||''}
 function fechaPrimerPagoInput(){return document.getElementById('fechaPrimerPago')?.value||''}
 function prepararFechasCredito(){
@@ -497,29 +502,46 @@ function actualizarVistaPreviaCronograma(){
  box.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>👁️ Vista previa del cronograma</b><span class="small">${n} cuotas</span></div><p class="small" style="margin:6px 0">Total del crédito: <b>${money(total)}</b> · Primer pago: <b>${fmtFecha(fecha)}</b></p><div style="max-height:220px;overflow:auto"><table><thead><tr><th>#</th><th>Fecha</th><th class="num">Cuota</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function crearPrestamo(e){
- e.preventDefault(); if(!db.clientes.length)return alert('Primero crea un cliente.');
- let capital=Math.round(+monto.value), pct=+interes.value, n=+modalidad.value, semanal=n<=4 && modalidad.value!=='24' && modalidad.value!=='30';
- let fechaCreacion=fechaCreacionInput();
- let fechaPrimerPago=fechaPrimerPagoInput();
- if(!fechaCreacion||!fechaPrimerPago)return alert('Selecciona la fecha de creación y la fecha del primer pago.');
- let dc=new Date(fechaCreacion+'T00:00:00'), dp=new Date(fechaPrimerPago+'T00:00:00');
- if(isNaN(dc.getTime())||isNaN(dp.getTime()))return alert('Las fechas seleccionadas no son válidas.');
- if(dp<dc)return alert('La fecha del primer pago no puede ser anterior a la fecha de creación.');
- if(dp.getDay()===0)return alert('El primer pago debe ser de lunes a sábado. El domingo no se realizan cobros.');
- if(!(capital>0))return alert('Ingresa un monto de préstamo válido.');
- if(capital>Math.round(db.capital)){
-   return alert('No puedes realizar este préstamo.\n\nCapital disponible: '+money(db.capital)+'\nMonto solicitado: '+money(capital)+'\n\nDebes inyectar capital antes de prestar este monto.');
+ e.preventDefault();
+ try{
+  if(!Array.isArray(db.clientes)||!db.clientes.length)return alert('Primero crea un cliente.');
+  if(!Array.isArray(db.prestamos))db.prestamos=[];
+  const elCliente=document.getElementById('pcliente');
+  const elMonto=document.getElementById('monto');
+  const elInteres=document.getElementById('interes');
+  const elModalidad=document.getElementById('modalidad');
+  if(!elCliente||!elMonto||!elInteres||!elModalidad)return alert('No se pudo abrir correctamente el formulario de crédito. Recarga la página e inténtalo nuevamente.');
+  let capital=Math.round(+elMonto.value), pct=+elInteres.value, n=+elModalidad.value, semanal=n<=4 && elModalidad.value!=='24' && elModalidad.value!=='30';
+  let fechaCreacion=fechaCreacionInput();
+  let fechaPrimerPago=fechaPrimerPagoInput();
+  if(!fechaCreacion||!fechaPrimerPago)return alert('Selecciona la fecha de creación y la fecha del primer pago.');
+  let dc=new Date(fechaCreacion+'T00:00:00'), dp=new Date(fechaPrimerPago+'T00:00:00');
+  if(isNaN(dc.getTime())||isNaN(dp.getTime()))return alert('Las fechas seleccionadas no son válidas.');
+  if(dp<dc)return alert('La fecha del primer pago no puede ser anterior a la fecha de creación.');
+  if(dp.getDay()===0)return alert('El primer pago debe ser de lunes a sábado. El domingo no se realizan cobros.');
+  if(!(capital>0))return alert('Ingresa un monto de préstamo válido.');
+  if(capital>Math.round(Number(db.capital||0))){
+    return alert('No puedes realizar este préstamo.\n\nCapital disponible: '+money(db.capital)+'\nMonto solicitado: '+money(capital)+'\n\nDebes inyectar capital antes de prestar este monto.');
+  }
+  const clienteId=Number(elCliente.value);
+  if(!clienteId || !db.clientes.some(c=>Number(c.id)===clienteId))return alert('Selecciona un cliente válido.');
+  let total=Math.round(capital*(1+pct/100)), cuota=Math.floor(total/n);
+  let p={id:Date.now(),clienteId,capital,pct,total,n,semanal,cuota,inicio:fechaCreacion,pagadas:0,pendiente:total,cuotas:[]};
+  let d=new Date(dp.getTime());
+  for(let i=0;i<n;i++){
+    while(d.getDay()===0)d.setDate(d.getDate()+1);
+    let montoCuota=(i===n-1)?(total-cuota*(n-1)):cuota;
+    p.cuotas.push({i:i+1,fecha:dateStr(d),monto:montoCuota,pagado:0,estado:'pendiente'});
+    d=semanal?addDays(d,7):nextCobro(d);
+  }
+  db.prestamos.push(p);
+  db.capital=Number(db.capital||0)-capital;
+  save();
+  show('inicio');
+ }catch(err){
+  console.error('Error al crear crédito:',err);
+  alert('No se pudo crear el crédito.\n\nDetalle: '+(err?.message||err));
  }
- let total=Math.round(capital*(1+pct/100)), cuota=Math.floor(total/n);
- let p={id:Date.now(),clienteId:+pcliente.value,capital,pct,total,n,semanal,cuota,inicio:fechaCreacion,pagadas:0,pendiente:total,cuotas:[]};
- let d=new Date(dp+'T00:00:00');
- for(let i=0;i<n;i++){
-   while(d.getDay()===0)d.setDate(d.getDate()+1);
-   let montoCuota=(i===n-1)?(total-cuota*(n-1)):cuota;
-   p.cuotas.push({i:i+1,fecha:dateStr(d),monto:montoCuota,pagado:0,estado:'pendiente'});
-   d=semanal?addDays(d,7):nextCobro(d);
- }
- db.prestamos.push(p);db.capital-=capital;save();show('inicio');
 }
 function cliente(id){return db.clientes.find(c=>c.id===id)||{nombre:'Cliente eliminado'}}
 function cobrar(pid,i){
