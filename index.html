@@ -430,8 +430,17 @@ function addDays(d,n){let x=new Date(d);x.setDate(x.getDate()+n);return x}
 function nextCobro(d){let x=new Date(d);x.setDate(x.getDate()+1);while(x.getDay()==0)x.setDate(x.getDate()+1);return x}
 function show(id){
  document.querySelectorAll('section').forEach(s=>s.classList.remove('active-section'));
- document.getElementById(id).classList.add('active-section');
+ const sec=document.getElementById(id); if(!sec)return;
+ sec.classList.add('active-section');
  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+ const navMap={inicio:0,clientes:1,cobros:2,creditosHoy:3,historial:4};
+ if(navMap[id]!==undefined){const nb=document.querySelectorAll('.navbtn')[navMap[id]];if(nb)nb.classList.add('active');}
+ if(id!=='inicio' && !sec.querySelector('.back-home')){
+  const back=document.createElement('button'); back.className='btn back-home'; back.type='button';
+  back.textContent='← Inicio'; back.onclick=()=>show('inicio');
+  back.style.cssText='margin:0 0 10px 0;padding:9px 12px;box-shadow:none;background:#fff;color:#1456d8;border:1px solid #dbe5f5';
+  sec.insertBefore(back,sec.firstChild);
+ }
  render();
  if(id==='nuevo'){fillClientes();prepararFechasCredito();actualizarVistaPreviaCronograma();}
 }
@@ -823,9 +832,20 @@ function render(){
  renderClientes();
  renderZonas();
  renderCreditosHoy();
- let items=[]; db.prestamos.forEach(p=>p.cuotas.forEach((q,i)=>{if(q.estado!=='pagado')items.push({p,q,i})}));
- let todayItems=items.filter(x=>x.q.fecha===today||x.q.fecha<today);
- cobrosHoy.innerHTML=todayItems.length?todayItems.slice(0,8).map(x=>rowCobro(x)).join(''):'<div class="row">No hay cobros pendientes para hoy.</div>';
+ // En Inicio, agrupar por cliente: varias cuotas atrasadas no ocupan varias filas.
+ let groupsHoy={};
+ db.prestamos.forEach(p=>p.cuotas.forEach((q,i)=>{
+  if(q.estado==='pagado'||!(q.fecha===today||q.fecha<today))return;
+  const cid=p.clienteId;
+  if(!groupsHoy[cid])groupsHoy[cid]={cliente:cliente(cid),items:[],monto:0,atrasos:0};
+  const g=groupsHoy[cid], resto=Math.max(0,Number(q.monto||0)-Number(q.pagado||0));
+  g.items.push({p,q,i}); g.monto+=resto; if(q.fecha<today)g.atrasos++;
+ }));
+ const gruposHoy=Object.values(groupsHoy);
+ cobrosHoy.innerHTML=gruposHoy.length?gruposHoy.slice(0,8).map(g=>`<div class="row" style="cursor:pointer" onclick="verCliente(${g.cliente.id})">
+  <div><b>${g.cliente.nombre}</b><div class="small">${g.atrasos?g.atrasos+' cuota(s) atrasada(s)':'Cuota(s) programada(s) hoy'}${g.items.length>g.atrasos?' · '+(g.items.length-g.atrasos)+' de hoy':''}</div></div>
+  <div style="text-align:right"><b>${money(g.monto)}</b><div class="small">Ver créditos ›</div></div>
+ </div>`).join(''):'<div class="row">No hay cobros pendientes para hoy.</div>';
  renderCobrosClientes();
  let movimientos=[...db.pagos.map(x=>({fecha:x.fecha,tipo:'cobro',monto:x.monto,detalle:cliente(x.clienteId).nombre})),...db.movimientosCapital.map(x=>({fecha:x.fecha,tipo:x.tipo,monto:x.monto,detalle:x.concepto}))].sort((a,b)=>b.fecha.localeCompare(a.fecha));
  historialList.innerHTML=movimientos.slice(0,30).map(x=>{
