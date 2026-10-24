@@ -389,7 +389,9 @@ function marcarCobroRevisado(clienteId){
   const fecha=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric',timeZone:'America/Lima'});
   const mensaje=`Hola ${c.nombre}, te informamos que el día de hoy (${fecha}) no se recibió el pago correspondiente. Si ya realizaste tu pago, por favor ignora este mensaje. Gracias.`;
   render();
-  abrirWhatsApp(c,mensaje);
+  if(confirm('¿Quieres enviarle al cliente el mensaje por WhatsApp informando que hoy no se recibió el pago?')){
+    abrirWhatsApp(c,mensaje);
+  }
 }
 function quitarCobroRevisado(clienteId){
   const hoy=dateStr(new Date());
@@ -866,10 +868,10 @@ function render(){
  const gruposTodosHoy=Object.values(groupsHoy);
  const gruposHoy=gruposTodosHoy.filter(g=>!revisadoHoy(g.cliente.id));
  const revisadosHoy=gruposTodosHoy.filter(g=>revisadoHoy(g.cliente.id));
- const infoRevisados=revisadosHoy.length?`<div class="small" style="margin:8px 0 10px;color:#666">${revisadosHoy.length} cliente(s) revisado(s) hoy y oculto(s) de esta lista. <button class="btn" style="padding:5px 8px;margin-left:4px" onclick="document.getElementById('revisadosHoy').style.display=document.getElementById('revisadosHoy').style.display==='none'?'block':'none'">Ver revisados</button></div><div id="revisadosHoy" style="display:none;margin-bottom:10px">${revisadosHoy.map(g=>`<div class="row"><div><b>${g.cliente.nombre}</b><div class="small">${g.atrasos} cuota(s) atrasada(s) · No pagó / revisado</div></div><button class="btn" style="padding:6px 9px" onclick="quitarCobroRevisado(${g.cliente.id})">↩ Mostrar</button></div>`).join('')}</div>`:'';
+ const infoRevisados=revisadosHoy.length?`<div class="small" style="margin:8px 0 10px;color:#666">${revisadosHoy.length} cliente(s) revisado(s) hoy y oculto(s) de esta lista. <button class="btn" style="padding:5px 8px;margin-left:4px" onclick="document.getElementById('revisadosHoy').style.display=document.getElementById('revisadosHoy').style.display==='none'?'block':'none'">Ver revisados</button></div><div id="revisadosHoy" style="display:none;margin-bottom:10px">${revisadosHoy.map(g=>`<div class="row"><div><b>${g.cliente.nombre}</b><div class="small">${g.atrasos} cuota(s) atrasada(s) · No pagó</div></div><button class="btn" style="padding:6px 9px" onclick="quitarCobroRevisado(${g.cliente.id})">↩ Mostrar</button></div>`).join('')}</div>`:'';
  cobrosHoy.innerHTML=infoRevisados+(gruposHoy.length?gruposHoy.slice(0,8).map(g=>`<div class="row" style="cursor:pointer" onclick="verCliente(${g.cliente.id})">
   <div><b>${g.cliente.nombre}</b><div class="small">${g.atrasos?g.atrasos+' cuota(s) atrasada(s)':'Cuota(s) programada(s) hoy'}${g.items.length>g.atrasos?' · '+(g.items.length-g.atrasos)+' de hoy':''}</div></div>
-  <div style="text-align:right"><b>${money(g.monto)}</b><div class="small">Ver créditos ›</div><button class="btn" style="padding:6px 8px;margin-top:5px" onclick="event.stopPropagation();marcarCobroRevisado(${g.cliente.id})">🚫 No pagó / Revisado</button></div>
+  <div style="text-align:right"><b>${money(g.monto)}</b><div class="small">Ver créditos ›</div><button class="btn" style="padding:6px 8px;margin-top:5px" onclick="event.stopPropagation();marcarCobroRevisado(${g.cliente.id})">🚫 No pagó</button></div>
  </div>`).join(''):'<div class="row">No hay cobros pendientes visibles para hoy.</div>');
  renderCobrosClientes();
  let movimientos=[...db.pagos.map(x=>({fecha:x.fecha,tipo:'cobro',monto:x.monto,detalle:cliente(x.clienteId).nombre})),...db.movimientosCapital.map(x=>({fecha:x.fecha,tipo:x.tipo,monto:x.monto,detalle:x.concepto}))].sort((a,b)=>b.fecha.localeCompare(a.fecha));
