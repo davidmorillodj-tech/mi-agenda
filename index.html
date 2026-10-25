@@ -298,6 +298,11 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
   </div>
   <div id="historicoDetalle" class="small" style="margin-top:9px"></div>
 </div>
+<div class="card" style="margin:10px 0 12px">
+  <label style="margin-top:0">🔎 Buscar en el historial</label>
+  <input id="buscarHistorial" placeholder="Buscar cliente, DNI o pago..." oninput="renderHistorial()" autocomplete="off">
+  <div class="small" style="margin-top:6px">Escribe el nombre o DNI de un cliente para ver rápidamente los pagos que ha realizado.</div>
+</div>
 <div id="historialList" class="list"></div>
 </section>
 
@@ -380,17 +385,22 @@ const REVISADOS_KEY='misCobrosRevisadosV1';
 let cobrosRevisados=JSON.parse(localStorage.getItem(REVISADOS_KEY)||'{}');
 function revisadoHoy(clienteId){ const hoy=dateStr(new Date()); return !!(cobrosRevisados[hoy]&&cobrosRevisados[hoy][clienteId]); }
 function limpiarRevisadosAntiguos(){ const hoy=dateStr(new Date()); Object.keys(cobrosRevisados).forEach(f=>{if(f!==hoy)delete cobrosRevisados[f];}); localStorage.setItem(REVISADOS_KEY,JSON.stringify(cobrosRevisados)); }
+function mensajeNoPago(c){
+  const fecha=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric',timeZone:'America/Lima'});
+  return `Hola ${c.nombre}, te informamos que el día de hoy (${fecha}) no se recibió el pago correspondiente. Si ya realizaste tu pago, por favor ignora este mensaje. Gracias.`;
+}
+function notificarNoPago(c){
+  abrirWhatsApp(c,mensajeNoPago(c));
+}
 function marcarCobroRevisado(clienteId){
   const hoy=dateStr(new Date());
   if(!cobrosRevisados[hoy])cobrosRevisados[hoy]={};
   cobrosRevisados[hoy][clienteId]=true;
   localStorage.setItem(REVISADOS_KEY,JSON.stringify(cobrosRevisados));
   const c=cliente(clienteId);
-  const fecha=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric',timeZone:'America/Lima'});
-  const mensaje=`Hola ${c.nombre}, te informamos que el día de hoy (${fecha}) no se recibió el pago correspondiente. Si ya realizaste tu pago, por favor ignora este mensaje. Gracias.`;
   render();
-  if(confirm('¿Quieres enviarle al cliente el mensaje por WhatsApp informando que hoy no se recibió el pago?')){
-    abrirWhatsApp(c,mensaje);
+  if(confirm('¿Quieres enviar una notificación porque hoy no se recibió el pago?')){
+    notificarNoPago(c);
   }
 }
 function quitarCobroRevisado(clienteId){
@@ -808,6 +818,26 @@ function renderCreditosHoy(){
  }).join('');
 }
 
+function renderHistorial(){
+ const input=document.getElementById('buscarHistorial');
+ const q=(input?.value||'').trim().toLowerCase();
+ const pagos=db.pagos.map(x=>{
+   const c=cliente(x.clienteId);
+   return {...x, nombre:c?.nombre||'Cliente eliminado', dni:c?.dni||''};
+ }).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+ if(q){
+   const encontrados=pagos.filter(x=>x.nombre.toLowerCase().includes(q)||String(x.dni).toLowerCase().includes(q));
+   historialList.innerHTML=encontrados.length?encontrados.map(x=>`<div class="row"><div><b>${x.nombre}</b><div class="small">${x.fecha} · Pago recibido</div></div><b class="success">+ ${money(x.monto)}</b></div>`).join(''):`<div class="row">No se encontraron pagos para «${q}».</div>`;
+   return;
+ }
+ const movimientos=[...pagos.map(x=>({fecha:x.fecha,tipo:'cobro',monto:x.monto,detalle:x.nombre})),...db.movimientosCapital.map(x=>({fecha:x.fecha,tipo:x.tipo,monto:x.monto,detalle:x.concepto}))].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+ historialList.innerHTML=movimientos.slice(0,30).map(x=>{
+   if(x.tipo==='ingreso')return `<div class="row"><div><b>Ingreso de capital</b><div class="small">${x.fecha} · ${x.detalle}</div></div><b style="color:#078453">+ ${money(x.monto)}</b></div>`;
+   if(x.tipo==='retiro')return `<div class="row"><div><b>Retiro / gasto</b><div class="small">${x.fecha} · ${x.detalle}</div></div><b style="color:#c52b44">− ${money(x.monto)}</b></div>`;
+   return `<div class="row"><div><b>${x.detalle}</b><div class="small">${x.fecha} · Cobro</div></div><b class="success">+ ${money(x.monto)}</b></div>`;
+ }).join('')||'<div class="row">Sin movimientos.</div>';
+}
+
 function render(){
  let totalPrest=db.prestamos.reduce((s,p)=>s+p.capital,0), pend=db.prestamos.reduce((s,p)=>s+p.pendiente,0);
  let today=dateStr(new Date()), hoy=db.pagos.filter(x=>x.fecha===today).reduce((s,x)=>s+x.monto,0);
@@ -874,12 +904,7 @@ function render(){
   <div style="text-align:right"><b>${money(g.monto)}</b><div class="small">Ver créditos ›</div><button class="btn" style="padding:6px 8px;margin-top:5px" onclick="event.stopPropagation();marcarCobroRevisado(${g.cliente.id})">🚫 No pagó</button></div>
  </div>`).join(''):'<div class="row">No hay cobros pendientes visibles para hoy.</div>');
  renderCobrosClientes();
- let movimientos=[...db.pagos.map(x=>({fecha:x.fecha,tipo:'cobro',monto:x.monto,detalle:cliente(x.clienteId).nombre})),...db.movimientosCapital.map(x=>({fecha:x.fecha,tipo:x.tipo,monto:x.monto,detalle:x.concepto}))].sort((a,b)=>b.fecha.localeCompare(a.fecha));
- historialList.innerHTML=movimientos.slice(0,30).map(x=>{
-   if(x.tipo==='ingreso')return `<div class="row"><div><b>Ingreso de capital</b><div class="small">${x.fecha} · ${x.detalle}</div></div><b style="color:#078453">+ ${money(x.monto)}</b></div>`;
-   if(x.tipo==='retiro')return `<div class="row"><div><b>Retiro / gasto</b><div class="small">${x.fecha} · ${x.detalle}</div></div><b style="color:#c52b44">− ${money(x.monto)}</b></div>`;
-   return `<div class="row"><div><b>${x.detalle}</b><div class="small">${x.fecha} · Cobro</div></div><b class="success">+ ${money(x.monto)}</b></div>`;
- }).join('')||'<div class="row">Sin movimientos.</div>';
+ renderHistorial();
  reportesBox.innerHTML=`<b>Resumen</b><p>Clientes: ${db.clientes.length}</p><p>Préstamos activos: ${db.prestamos.filter(p=>p.pendiente>0).length}</p><p>Préstamos terminados: ${db.prestamos.filter(p=>p.pendiente<=0.005).length}</p><p>Capital disponible: <b>${money(db.capital)}</b></p><p>Total pendiente: <b>${money(pend)}</b></p>`;
 }
 function estadoCredito(p, hoy=dateStr(new Date())){
