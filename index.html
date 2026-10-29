@@ -130,6 +130,12 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
   <h2 style="margin:0">📅 Cobros de hoy</h2>
   <button class="btn" style="box-shadow:none;background:none;color:#1456d8;padding:6px" onclick="show('cobros')">Ver todos ›</button>
 </div>
+<div id="cobrosHoyTabs" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0 8px">
+  <button id="tabCobrosTodos" class="btn primary" style="padding:8px 6px" onclick="cambiarFiltroCobrosHoy('todos')">TODOS</button>
+  <button id="tabCobrosDiarios" class="btn" style="padding:8px 6px" onclick="cambiarFiltroCobrosHoy('diarios')">DIARIOS</button>
+  <button id="tabCobrosSemanales" class="btn" style="padding:8px 6px" onclick="cambiarFiltroCobrosHoy('semanales')">SEMANALES</button>
+</div>
+<div id="cobrosHoyResumen" class="small" style="margin:0 2px 8px;color:#666"></div>
 <div id="cobrosHoy" class="list"></div>
 
 <!-- Seguridad y respaldo: acceso visible desde Inicio -->
@@ -886,23 +892,7 @@ function render(){
  renderClientes();
  renderZonas();
  renderCreditosHoy();
- // En Inicio, agrupar por cliente: varias cuotas atrasadas no ocupan varias filas.
- let groupsHoy={};
- db.prestamos.forEach(p=>p.cuotas.forEach((q,i)=>{
-  if(q.estado==='pagado'||!(q.fecha===today||q.fecha<today))return;
-  const cid=p.clienteId;
-  if(!groupsHoy[cid])groupsHoy[cid]={cliente:cliente(cid),items:[],monto:0,atrasos:0};
-  const g=groupsHoy[cid], resto=Math.max(0,Number(q.monto||0)-Number(q.pagado||0));
-  g.items.push({p,q,i}); g.monto+=resto; if(q.fecha<today)g.atrasos++;
- }));
- const gruposTodosHoy=Object.values(groupsHoy);
- const gruposHoy=gruposTodosHoy.filter(g=>!revisadoHoy(g.cliente.id));
- const revisadosHoy=gruposTodosHoy.filter(g=>revisadoHoy(g.cliente.id));
- const infoRevisados=revisadosHoy.length?`<div class="small" style="margin:8px 0 10px;color:#666">${revisadosHoy.length} cliente(s) revisado(s) hoy y oculto(s) de esta lista. <button class="btn" style="padding:5px 8px;margin-left:4px" onclick="document.getElementById('revisadosHoy').style.display=document.getElementById('revisadosHoy').style.display==='none'?'block':'none'">Ver revisados</button></div><div id="revisadosHoy" style="display:none;margin-bottom:10px">${revisadosHoy.map(g=>`<div class="row"><div><b>${g.cliente.nombre}</b><div class="small">${g.atrasos} cuota(s) atrasada(s) · No pagó</div></div><button class="btn" style="padding:6px 9px" onclick="quitarCobroRevisado(${g.cliente.id})">↩ Mostrar</button></div>`).join('')}</div>`:'';
- cobrosHoy.innerHTML=infoRevisados+(gruposHoy.length?gruposHoy.slice(0,8).map(g=>`<div class="row" style="cursor:pointer" onclick="verCliente(${g.cliente.id})">
-  <div><b>${g.cliente.nombre}</b><div class="small">${g.atrasos?g.atrasos+' cuota(s) atrasada(s)':'Cuota(s) programada(s) hoy'}${g.items.length>g.atrasos?' · '+(g.items.length-g.atrasos)+' de hoy':''}</div></div>
-  <div style="text-align:right"><b>${money(g.monto)}</b><div class="small">Ver créditos ›</div><button class="btn" style="padding:6px 8px;margin-top:5px" onclick="event.stopPropagation();marcarCobroRevisado(${g.cliente.id})">🚫 No pagó</button></div>
- </div>`).join(''):'<div class="row">No hay cobros pendientes visibles para hoy.</div>');
+ renderCobrosHoyInicio();
  renderCobrosClientes();
  renderHistorial();
  reportesBox.innerHTML=`<b>Resumen</b><p>Clientes: ${db.clientes.length}</p><p>Préstamos activos: ${db.prestamos.filter(p=>p.pendiente>0).length}</p><p>Préstamos terminados: ${db.prestamos.filter(p=>p.pendiente<=0.005).length}</p><p>Capital disponible: <b>${money(db.capital)}</b></p><p>Total pendiente: <b>${money(pend)}</b></p>`;
@@ -1398,6 +1388,62 @@ function verCuotas(pid){
      <div style="text-align:right"><span class="badge ${estado}">${texto}</span><br><button class="btn" style="padding:6px 9px;margin-top:5px" onclick="editarCuota(${p.id},${i})">✏️ Editar cuota</button>${resto>0?`<br><button class="btn success" style="padding:6px 9px;margin-top:5px" onclick="cobrar(${p.id},${i})">Cobrar ${money(resto)}</button>`:''}<br><button class="btn" style="padding:6px 9px;margin-top:5px;color:#c62838;border:1px solid #f0b8be" onclick="eliminarCuota(${p.id},${i})">🗑️ Eliminar cuota</button></div></div>`;
  }).join('');
  show('clienteDetalle');
+}
+
+let filtroCobrosHoy='todos';
+let paginaCobrosHoy=1;
+const COBROS_HOY_POR_PAGINA=20;
+
+function cambiarFiltroCobrosHoy(filtro){
+ filtroCobrosHoy=filtro;
+ paginaCobrosHoy=1;
+ renderCobrosHoyInicio();
+}
+
+function renderCobrosHoyInicio(){
+ const box=document.getElementById('cobrosHoy');
+ if(!box)return;
+ const today=dateStr(new Date());
+ const groupsHoy={};
+ db.prestamos.forEach(p=>p.cuotas.forEach((q,i)=>{
+   if(q.estado==='pagado'||!(q.fecha===today||q.fecha<today))return;
+   if(Math.max(0,Number(q.monto||0)-Number(q.pagado||0))<=0.005)return;
+   const cid=p.clienteId;
+   if(!groupsHoy[cid])groupsHoy[cid]={cliente:cliente(cid),items:[],monto:0,atrasos:0,diarios:0,semanales:0};
+   const g=groupsHoy[cid], resto=Math.max(0,Number(q.monto||0)-Number(q.pagado||0));
+   g.items.push({p,q,i}); g.monto+=resto;
+   if(q.fecha<today)g.atrasos++;
+   if(p.semanal)g.semanales++; else g.diarios++;
+ }));
+ let grupos=Object.values(groupsHoy).filter(g=>g.cliente);
+ if(filtroCobrosHoy==='diarios') grupos=grupos.filter(g=>g.diarios>0);
+ if(filtroCobrosHoy==='semanales') grupos=grupos.filter(g=>g.semanales>0);
+ grupos.sort((a,b)=>a.cliente.nombre.localeCompare(b.cliente.nombre,'es'));
+ const revisados=grupos.filter(g=>revisadoHoy(g.cliente.id));
+ const pendientes=grupos.filter(g=>!revisadoHoy(g.cliente.id));
+ const totalPaginas=Math.max(1,Math.ceil(pendientes.length/COBROS_HOY_POR_PAGINA));
+ if(paginaCobrosHoy>totalPaginas)paginaCobrosHoy=totalPaginas;
+ const inicio=(paginaCobrosHoy-1)*COBROS_HOY_POR_PAGINA;
+ const visibles=pendientes.slice(inicio,inicio+COBROS_HOY_POR_PAGINA);
+ const etiqueta=filtroCobrosHoy==='diarios'?'diarios':(filtroCobrosHoy==='semanales'?'semanales':'cobros');
+ const resumen=document.getElementById('cobrosHoyResumen');
+ if(resumen)resumen.innerHTML=`${pendientes.length} ${etiqueta} pendientes${revisados.length?` · ${revisados.length} revisado(s) hoy`:''}`;
+ ['todos','diarios','semanales'].forEach(k=>{
+   const el=document.getElementById('tabCobros'+k.charAt(0).toUpperCase()+k.slice(1));
+   if(el)el.className='btn'+(filtroCobrosHoy===k?' primary':'');
+ });
+ const infoRevisados=revisados.length?`<div class="small" style="margin:8px 0 10px;color:#666">${revisados.length} cliente(s) revisado(s) hoy y oculto(s) de esta lista. <button class="btn" style="padding:5px 8px;margin-left:4px" onclick="document.getElementById('revisadosHoy').style.display=document.getElementById('revisadosHoy').style.display==='none'?'block':'none'">Ver revisados</button></div><div id="revisadosHoy" style="display:none;margin-bottom:10px">${revisados.map(g=>`<div class="row"><div><b>${g.cliente.nombre}</b><div class="small">${g.atrasos} cuota(s) atrasada(s) · No pagó</div></div><button class="btn" style="padding:6px 9px" onclick="quitarCobroRevisado(${g.cliente.id})">↩ Mostrar</button></div>`).join('')}</div>`:'';
+ const filas=visibles.map(g=>`<div class="row" style="cursor:pointer" onclick="verCliente(${g.cliente.id})">
+  <div><b>${g.cliente.nombre}</b><div class="small">${g.atrasos?g.atrasos+' cuota(s) atrasada(s)':'Cuota(s) programada(s) hoy'}${g.items.length>g.atrasos?' · '+(g.items.length-g.atrasos)+' de hoy':''} · ${g.diarios&&g.semanales?'Diario + semanal':(g.semanales?'Semanal':'Diario')}</div></div>
+  <div style="text-align:right"><b>${money(g.monto)}</b><div class="small">Ver créditos ›</div><button class="btn" style="padding:6px 8px;margin-top:5px" onclick="event.stopPropagation();marcarCobroRevisado(${g.cliente.id})">🚫 No pagó</button></div>
+ </div>`).join('');
+ let paginacion='';
+ if(totalPaginas>1) paginacion=`<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 0 2px;flex-wrap:wrap">
+  <button class="btn" style="padding:7px 10px" ${paginaCobrosHoy===1?'disabled':''} onclick="paginaCobrosHoy--;renderCobrosHoyInicio()">‹ Anterior</button>
+  <span class="small">Página ${paginaCobrosHoy} de ${totalPaginas}</span>
+  <button class="btn" style="padding:7px 10px" ${paginaCobrosHoy===totalPaginas?'disabled':''} onclick="paginaCobrosHoy++;renderCobrosHoyInicio()">Siguiente ›</button>
+ </div>`;
+ box.innerHTML=infoRevisados+(filas||'<div class="row">No hay cobros pendientes para esta categoría hoy.</div>')+paginacion;
 }
 
 function renderCobrosClientes(){
