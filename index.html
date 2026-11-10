@@ -185,17 +185,18 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
   <button class="btn" style="border:1px solid #f0b8be;color:#c62838;background:#fff5f6" onclick="eliminarClienteActual()">🗑️ ELIMINAR CLIENTE</button>
 </div>
 <div id="detalleDatos" class="card"></div>
-<div style="display:flex;gap:8px;margin:12px 0">
-  <button id="tabAbonos" class="btn" onclick="mostrarTabCredito('abonos', creditoActualId)">💵 Abono</button>
-</div>
-<div id="panelCuotas">
+<section id="panelPrestamos" style="margin-top:12px">
   <h2>Préstamos</h2>
   <div id="detallePrestamos" class="list"></div>
-</div>
-<div id="panelAbonos" style="display:none">
-  <h2>Historial de abono</h2>
-  <div id="tablaAbonos"></div>
-</div>
+</section>
+<details id="panelAbonos" ontoggle="if(this.open && creditoActualId!==null) renderTablaAbonos(creditoActualId)" style="margin-top:12px;background:#fff;border:1px solid #e5eaf1;border-radius:16px;padding:12px">
+  <summary style="cursor:pointer;font-weight:800;font-size:18px;color:#1e293b">💵 Historial de abono</summary>
+  <div id="tablaAbonos" style="margin-top:10px"></div>
+</details>
+<details id="panelCuotas" style="margin-top:12px;background:#fff;border:1px solid #e5eaf1;border-radius:16px;padding:12px">
+  <summary style="cursor:pointer;font-weight:800;font-size:18px;color:#1e293b">📋 Cuotas</summary>
+  <div id="listaCuotas" class="list" style="margin-top:10px"></div>
+</details>
 </section>
 
 <section id="editarCliente">
@@ -1013,6 +1014,10 @@ function verCliente(id){
    </details>`;
  }
  detallePrestamos.innerHTML=html;
+ document.getElementById('panelAbonos').hidden=true;
+ document.getElementById('panelCuotas').hidden=true;
+ document.getElementById('tablaAbonos').innerHTML='';
+ document.getElementById('listaCuotas').innerHTML='';
  show('clienteDetalle');
 }
 
@@ -1229,11 +1234,12 @@ function cerrarPagoResultado(){
 }
 
 function mostrarTabCredito(tab, pid){
- // La lista/detalle de préstamos permanece visible; solo se alterna el historial de abonos.
- document.getElementById('panelCuotas').style.display='block';
- document.getElementById('panelAbonos').style.display=tab==='abonos'?'block':'none';
- document.getElementById('tabAbonos').className=tab==='abonos'?'btn primary':'btn';
- if(tab==='abonos') renderTablaAbonos(pid || creditoActualId);
+ // El historial y la lista de cuotas son apartados independientes desplegables.
+ if(tab==='abonos'){
+   const panel=document.getElementById('panelAbonos');
+   panel.open=true;
+   renderTablaAbonos(pid || creditoActualId);
+ }
 }
 function recalcularCreditoDesdeAbonos(pid){
  let p=db.prestamos.find(x=>x.id===pid); if(!p)return 0;
@@ -1366,7 +1372,9 @@ function verCuotas(pid){
  let p=db.prestamos.find(x=>x.id===pid);
  if(!p)return;
  let c=cliente(p.clienteId);
- detalleNombre.textContent=`${c.nombre} · Cuotas`;
+ detalleNombre.textContent=`${c.nombre} · Crédito`;
+ document.getElementById('panelAbonos').hidden=false;
+ document.getElementById('panelCuotas').hidden=false;
  const estado=estadoCredito(p);
  const vencimiento=Array.isArray(p.cuotas)&&p.cuotas.length?p.cuotas.reduce((max,q)=>q.fecha>max?q.fecha:max,''):'';
  const lineaEstado=estado.tipo==='vencido' ? `<div style="margin-top:7px;color:#c62838;font-weight:800">🔴 Crédito vencido · Venció el ${fmtFecha(vencimiento)}</div>` : estado.tipo==='atrasado' ? `<div style="margin-top:7px;color:#b26a00;font-weight:800">🟡 Atrasado · ${estado.atrasadas} cuota(s) vencida(s)</div>` : estado.tipo==='vigente' ? `<div style="margin-top:7px;color:#078453;font-weight:800">🟢 Crédito vigente</div>` : `<div style="margin-top:7px;color:#078453;font-weight:800">✅ Crédito terminado</div>`;
@@ -1379,13 +1387,17 @@ function verCuotas(pid){
      <button class="btn" onclick="abrirNotificacionesCredito(${p.id})">🔔 NOTIFICACIONES</button>
      <button class="btn" style="grid-column:1/-1;border:1px solid #f0b8be;color:#c62838;background:#fff5f6" onclick="eliminarCredito(${p.id})">🗑️ ELIMINAR ESTE CRÉDITO</button>
    </div>
- </div>` + p.cuotas.map((q,i)=>{
+ </div>`;
+ document.getElementById('listaCuotas').innerHTML=p.cuotas.map((q,i)=>{
    let resto=Math.max(0,q.monto-q.pagado);
    let estado=q.pagado>=q.monto?'paid':(q.fecha<dateStr(new Date())?'late':'pending');
    let texto=q.pagado>=q.monto?'Pagado':(q.fecha<dateStr(new Date())?'Atrasado':(q.pagado?'Parcial':'Pendiente'));
    return `<div class="row"><div><b>Cuota ${q.i}</b><div class="small">${q.fecha} · ${money(q.monto)}</div></div>
      <div style="text-align:right"><span class="badge ${estado}">${texto}</span><br><button class="btn" style="padding:6px 9px;margin-top:5px" onclick="editarCuota(${p.id},${i})">✏️ Editar cuota</button>${resto>0?`<br><button class="btn success" style="padding:6px 9px;margin-top:5px" onclick="cobrar(${p.id},${i})">Cobrar ${money(resto)}</button>`:''}<br><button class="btn" style="padding:6px 9px;margin-top:5px;color:#c62838;border:1px solid #f0b8be" onclick="eliminarCuota(${p.id},${i})">🗑️ Eliminar cuota</button></div></div>`;
  }).join('');
+ // Al cambiar de crédito, ambos paneles empiezan cerrados; pueden abrirse por separado.
+ document.getElementById('panelAbonos').open=false;
+ document.getElementById('panelCuotas').open=false;
  show('clienteDetalle');
 }
 
