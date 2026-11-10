@@ -181,14 +181,14 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
   <button class="btn" onclick="editarClienteActual()">✏️ EDITAR DATOS</button>
   <button id="btnPrestarCliente" class="btn primary" onclick="prestarACliente()">💰 PRESTAR</button>
-  <button id="btnCobrarCliente" class="btn success" onclick="cobrarCliente()">💵 COBRAR / PAGAR</button>
+  <button id="btnCobrarCliente" class="btn success" onclick="cobrarCliente()">💵 ABONAR</button>
   <button class="btn" style="border:1px solid #f0b8be;color:#c62838;background:#fff5f6" onclick="eliminarClienteActual()">🗑️ ELIMINAR CLIENTE</button>
 </div>
 <div id="detalleDatos" class="card"></div>
-<section id="panelPrestamos" style="margin-top:12px">
+<div id="panelPrestamos" style="margin-top:12px">
   <h2>Préstamos</h2>
   <div id="detallePrestamos" class="list"></div>
-</section>
+</div>
 <details id="panelAbonos" ontoggle="if(this.open && creditoActualId!==null) renderTablaAbonos(creditoActualId)" style="margin-top:12px;background:#fff;border:1px solid #e5eaf1;border-radius:16px;padding:12px">
   <summary style="cursor:pointer;font-weight:800;font-size:18px;color:#1e293b">💵 Historial de abono</summary>
   <div id="tablaAbonos" style="margin-top:10px"></div>
@@ -468,9 +468,16 @@ function retirarCapital(){
 function dateStr(d){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'}).format(d)}
 function addDays(d,n){let x=new Date(d);x.setDate(x.getDate()+n);return x}
 function nextCobro(d){let x=new Date(d);x.setDate(x.getDate()+1);while(x.getDay()==0)x.setDate(x.getDate()+1);return x}
-function show(id){
- document.querySelectorAll('section').forEach(s=>s.classList.remove('active-section'));
+function show(id,opts={}){
  const sec=document.getElementById(id); if(!sec)return;
+ const key=opts.key||appPendingNavKey||id;
+ appPendingNavKey=null;
+ if(!opts.fromPop && !appRestoringHistory && key!==appCurrentNavKey){
+   history.pushState(appNavState(id,key),'',location.href);
+ }
+ appCurrentNavKey=key;
+ if(opts.fromPop && history.state?.miAgenda) appCurrentNavKey=history.state.key||key;
+ document.querySelectorAll('section').forEach(s=>s.classList.remove('active-section'));
  sec.classList.add('active-section');
  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
  const navMap={inicio:0,clientes:1,cobros:2,creditosHoy:3,historial:4};
@@ -979,6 +986,23 @@ function cobrarDesdeZona(clienteId,distrito){
 
 let clienteActualId=null;
 let creditoActualId=null;
+// Navegación interna: conserva la pantalla anterior al usar Atrás del teléfono.
+let appPendingNavKey=null;
+let appRestoringHistory=false;
+let appCurrentNavKey='inicio';
+function appNavState(section,key){return {miAgenda:true,section,key,clienteId:clienteActualId,creditoId:creditoActualId};}
+function restaurarNavegacionApp(state){
+ if(!state || !state.miAgenda){show('inicio',{fromPop:true,key:'inicio'});return;}
+ appRestoringHistory=true;
+ try{
+   if(state.key && String(state.key).startsWith('credit:')) verCuotas(Number(state.creditoId||String(state.key).split(':')[1]));
+   else if(state.key && String(state.key).startsWith('client:')) verCliente(Number(state.clienteId||String(state.key).split(':')[1]));
+   else show(state.section||'inicio',{fromPop:true,key:state.key||state.section||'inicio'});
+ }finally{appRestoringHistory=false;}
+}
+window.addEventListener('popstate',e=>restaurarNavegacionApp(e.state));
+history.replaceState(appNavState('inicio','inicio'),'',location.href);
+appCurrentNavKey='inicio';
 
 function verCliente(id){
  clienteActualId=id;
@@ -1002,8 +1026,10 @@ function verCliente(id){
      <div class="small">${p.semanal?'Semanal':'Diario'} · ${p.n} ${p.semanal?'semana(s)':'días'} · Pendiente ${money(p.pendiente)}${detalleEstado}</div>
      <div class="small">📅 Creado: ${fmtFecha(p.inicio)||'—'} · ${abiertas.length} cuota(s) pendiente(s)</div></div>
      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-       <button class="btn" onclick="verCuotas(${p.id})">Ver cuotas</button>
-       <button class="btn" style="border:1px solid #f0b8be;color:#c62838;background:#fff5f6" onclick="eliminarCredito(${p.id})">🗑️</button>
+       <button class="btn success" onclick="abonarCredito(${p.id})">💵 Abonar</button>
+       <button class="btn" style="padding:0;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;font-size:18px" title="Ver detalle" aria-label="Ver detalle" onclick="verCuotas(${p.id})">📋</button>
+       <button class="btn" style="padding:0;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;font-size:18px" title="Editar crédito" aria-label="Editar crédito" onclick="editarCredito(${p.id})">✏️</button>
+       <button class="btn" style="padding:0;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;border:1px solid #f0b8be;color:#c62838;background:#fff5f6" title="Eliminar crédito" aria-label="Eliminar crédito" onclick="eliminarCredito(${p.id})">🗑️</button>
      </div></div>`;
  };
  let html=activos.length?activos.map(tarjetaCredito).join(''):'<div class="row"><b>✅ No hay créditos activos.</b><div class="small">Este cliente está al día. Puedes crearle un nuevo crédito con el botón PRESTAR.</div></div>';
@@ -1018,6 +1044,7 @@ function verCliente(id){
  document.getElementById('panelCuotas').hidden=true;
  document.getElementById('tablaAbonos').innerHTML='';
  document.getElementById('listaCuotas').innerHTML='';
+ appPendingNavKey='client:'+id;
  show('clienteDetalle');
 }
 
@@ -1112,6 +1139,62 @@ function eliminarCredito(pid){
  alert('Crédito eliminado correctamente. El capital disponible fue actualizado.');
 }
 
+function editarCredito(pid){
+ const p=db.prestamos.find(x=>x.id===pid); if(!p)return;
+ const c=cliente(p.clienteId);
+ const pagosAplicados=(p.cuotas||[]).reduce((s,q)=>s+Number(q.pagado||0),0);
+ const capitalTxt=prompt(`EDITAR CRÉDITO · ${c.nombre}\n\nCapital prestado (S/):`,String(p.capital));
+ if(capitalTxt===null)return;
+ const nuevoCapital=Math.round(Number(capitalTxt));
+ if(!(nuevoCapital>0)){alert('El capital debe ser mayor que cero.');return;}
+ const pctTxt=prompt('Porcentaje de interés (0, 5, 10, 15 o 20):',String(p.pct||0));
+ if(pctTxt===null)return;
+ const nuevoPct=Number(pctTxt);
+ if(![0,5,10,15,20].includes(nuevoPct)){alert('Selecciona un interés válido: 0, 5, 10, 15 o 20%.');return;}
+ const modalidadActual=p.semanal?String(Math.min(4,Math.max(1,Number(p.n)||1))):String(p.n);
+ const modalidadTxt=prompt('Cantidad de cuotas: escribe 24 o 30 para diario, o 1, 2, 3 o 4 para semanal.',modalidadActual);
+ if(modalidadTxt===null)return;
+ const nuevoN=Number(modalidadTxt);
+ const nuevaSemanal=[1,2,3,4].includes(nuevoN);
+ if(!(nuevaSemanal||[24,30].includes(nuevoN))){alert('Cantidad no válida. Usa 24 o 30 cuotas diarias, o de 1 a 4 cuotas semanales.');return;}
+ const inicioTxt=prompt('Fecha de creación (AAAA-MM-DD):',String(p.inicio||dateStr(new Date())));
+ if(inicioTxt===null)return;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(inicioTxt)||isNaN(new Date(inicioTxt+'T00:00:00').getTime())){alert('La fecha de creación no es válida.');return;}
+ const primeraPendiente=(p.cuotas||[]).find(q=>Number(q.pagado||0)<Number(q.monto||0)-0.005);
+ const fechaBase=primeraPendiente?.fecha||dateStr(new Date());
+ const primeraTxt=prompt('Fecha de la próxima cuota pendiente (AAAA-MM-DD):',fechaBase);
+ if(primeraTxt===null)return;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(primeraTxt)||isNaN(new Date(primeraTxt+'T00:00:00').getTime())||new Date(primeraTxt+'T00:00:00').getDay()===0){alert('La fecha de la próxima cuota no es válida. No puede ser domingo.');return;}
+ const cuotasAnteriores=(p.cuotas||[]).filter(q=>Number(q.pagado||0)>0.005).map(q=>({...q}));
+ if(nuevoN<cuotasAnteriores.length){alert(`No puedes reducir el crédito a ${nuevoN} cuotas porque ya existen ${cuotasAnteriores.length} cuotas con pagos registrados. El historial se conservará.`);return;}
+ const totalCalculado=Math.round(nuevoCapital*(1+nuevoPct/100));
+ const totalHistorico=cuotasAnteriores.reduce((s,q)=>s+Number(q.monto||0),0);
+ const totalNuevo=Math.max(totalCalculado,totalHistorico,Math.round(pagosAplicados));
+ const capitalAdicional=nuevoCapital-Number(p.capital||0);
+ if(capitalAdicional>Number(db.capital||0)+0.005){alert(`No hay capital suficiente para aumentar este préstamo.\n\nCapital disponible: ${money(db.capital)}\nAumento solicitado: ${money(capitalAdicional)}`);return;}
+ if(!confirm(`Se actualizará únicamente el crédito de ${c.nombre}.\n\nCapital: ${money(p.capital)} → ${money(nuevoCapital)}\nInterés: ${p.pct}% → ${nuevoPct}%\nCuotas: ${p.n} → ${nuevoN}\n\nLos abonos registrados se conservarán. Las cuotas ya pagadas o abonadas no se modificarán; se recalcularán las cuotas pendientes. ¿Continuar?`))return;
+ db.capital=Number(db.capital||0)-capitalAdicional;
+ const cantidadNuevas=nuevoN-cuotasAnteriores.length;
+ const saldoNuevo=Math.max(0,totalNuevo-totalHistorico);
+ const cuotaBase=cantidadNuevas>0?Math.floor(saldoNuevo/cantidadNuevas):0;
+ const nuevasCuotas=[];
+ let d=new Date(primeraTxt+'T00:00:00');
+ for(let i=0;i<cantidadNuevas;i++){
+   while(d.getDay()===0)d.setDate(d.getDate()+1);
+   const monto=i===cantidadNuevas-1?saldoNuevo-cuotaBase*(cantidadNuevas-1):cuotaBase;
+   nuevasCuotas.push({i:cuotasAnteriores.length+i+1,fecha:dateStr(d),monto,pagado:0,estado:'pendiente'});
+   d=nuevaSemanal?addDays(d,7):nextCobro(d);
+ }
+ p.capital=nuevoCapital; p.pct=nuevoPct; p.n=nuevoN; p.semanal=nuevaSemanal;
+ p.inicio=inicioTxt; p.total=totalNuevo; p.cuota=cantidadNuevas?cuotaBase:0;
+ p.cuotas=[...cuotasAnteriores,...nuevasCuotas];
+ p.cuotas.forEach((q,i)=>{q.i=i+1; q.estado=Number(q.pagado||0)>=Number(q.monto||0)-0.005?'pagado':Number(q.pagado||0)>0?'parcial':'pendiente';});
+ p.pendiente=+p.cuotas.reduce((sum,q)=>sum+Math.max(0,Number(q.monto||0)-Number(q.pagado||0)),0);
+ save();
+ verCliente(p.clienteId);
+ alert('Crédito actualizado. Los abonos históricos se conservaron y solo se recalcularon las cuotas pendientes.');
+}
+
 function abrirNotificaciones(){
  if(clienteActualId===null)return;
  document.getElementById('notificacionesModal').style.display='flex';
@@ -1119,12 +1202,12 @@ function abrirNotificaciones(){
 function cerrarNotificaciones(){
  document.getElementById('notificacionesModal').style.display='none';
 }
-function cobrarCredito(pid){
+function cobrarCredito(pid,modo='abono'){
  let p=db.prestamos.find(x=>x.id===pid);
  if(!p)return;
  if(p.pendiente<=0.005){alert('Este crédito ya está pagado.');return;}
  let c=cliente(p.clienteId);
- let val=prompt(`Pago de ${c.nombre}\nSaldo de ESTE crédito: ${money(p.pendiente)}\n\nEscribe el monto REAL que entrega el cliente:`, '');
+ let val=prompt(`${modo==='abono'?'Abono':'Pago'} de ${c.nombre}\nSaldo de ESTE crédito: ${money(p.pendiente)}\n\nEscribe el monto REAL que entrega el cliente:`, '');
  if(val===null)return;
  val=Math.round(+val);
  if(!(val>0))return;
@@ -1159,6 +1242,11 @@ function cobrarCredito(pid){
  document.getElementById('pagoResultado').style.display='flex';
  creditoActualId=p.id;
  verCuotas(p.id);
+}
+
+function abonarCredito(pid){
+ // Abono libre: permite registrar cualquier importe y lo aplica solo a las cuotas pendientes de este crédito.
+ cobrarCredito(pid,'abono');
 }
 
 function abrirNotificacionesCredito(pid){
@@ -1220,14 +1308,14 @@ function cobrarCliente(){
  if(clienteActualId===null)return;
  let ps=db.prestamos.filter(p=>p.clienteId===clienteActualId && p.pendiente>0.005);
  if(!ps.length){alert('Este cliente no tiene saldo pendiente.');return;}
- if(ps.length===1){verCuotas(ps[0].id);setTimeout(()=>cobrarCredito(ps[0].id),0);return;}
+ if(ps.length===1){verCuotas(ps[0].id);setTimeout(()=>abonarCredito(ps[0].id),0);return;}
  const c=cliente(clienteActualId);
  const opciones=ps.map((p,i)=>`${i+1}. ${p.semanal?'Semanal':'Diario'} · ${p.n} ${p.semanal?'semana(s)':'días'} · Creado ${fmtFecha(p.inicio)} · Saldo ${money(p.pendiente)}`).join('\n');
  const eleccion=prompt(`El cliente ${c.nombre} tiene ${ps.length} créditos activos.\n\nSelecciona a cuál crédito aplicar el pago:\n\n${opciones}\n\nEscribe el número del crédito:`, '1');
  if(eleccion===null)return;
  const idx=Math.round(+eleccion)-1;
  if(idx<0||idx>=ps.length)return alert('Selecciona un número de crédito válido.');
- cobrarCredito(ps[idx].id);
+ abonarCredito(ps[idx].id);
 }
 function cerrarPagoResultado(){
  document.getElementById('pagoResultado').style.display='none';
@@ -1383,9 +1471,10 @@ function verCuotas(pid){
  <div class="card" style="margin-bottom:10px">
    <div class="small">Este saldo corresponde únicamente a este crédito.</div>
    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
-     <button class="btn success" onclick="cobrarCredito(${p.id})">💵 COBRAR / PAGAR</button>
+     <button class="btn success" style="grid-column:1/-1" onclick="abonarCredito(${p.id})">💵 ABONAR</button>
      <button class="btn" onclick="abrirNotificacionesCredito(${p.id})">🔔 NOTIFICACIONES</button>
-     <button class="btn" style="grid-column:1/-1;border:1px solid #f0b8be;color:#c62838;background:#fff5f6" onclick="eliminarCredito(${p.id})">🗑️ ELIMINAR ESTE CRÉDITO</button>
+     <button class="btn" style="padding:0;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;font-size:18px" title="Editar crédito" aria-label="Editar crédito" onclick="editarCredito(${p.id})">✏️</button>
+     <button class="btn" style="padding:0;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;border:1px solid #f0b8be;color:#c62838;background:#fff5f6" title="Eliminar crédito" aria-label="Eliminar crédito" onclick="eliminarCredito(${p.id})">🗑️</button>
    </div>
  </div>`;
  document.getElementById('listaCuotas').innerHTML=p.cuotas.map((q,i)=>{
@@ -1393,11 +1482,12 @@ function verCuotas(pid){
    let estado=q.pagado>=q.monto?'paid':(q.fecha<dateStr(new Date())?'late':'pending');
    let texto=q.pagado>=q.monto?'Pagado':(q.fecha<dateStr(new Date())?'Atrasado':(q.pagado?'Parcial':'Pendiente'));
    return `<div class="row"><div><b>Cuota ${q.i}</b><div class="small">${q.fecha} · ${money(q.monto)}</div></div>
-     <div style="text-align:right"><span class="badge ${estado}">${texto}</span><br><button class="btn" style="padding:6px 9px;margin-top:5px" onclick="editarCuota(${p.id},${i})">✏️ Editar cuota</button>${resto>0?`<br><button class="btn success" style="padding:6px 9px;margin-top:5px" onclick="cobrar(${p.id},${i})">Cobrar ${money(resto)}</button>`:''}<br><button class="btn" style="padding:6px 9px;margin-top:5px;color:#c62838;border:1px solid #f0b8be" onclick="eliminarCuota(${p.id},${i})">🗑️ Eliminar cuota</button></div></div>`;
+     <div style="text-align:right"><span class="badge ${estado}">${texto}</span><br><button class="btn" style="padding:6px 9px;margin-top:5px" onclick="editarCuota(${p.id},${i})">✏️ Editar cuota</button><br><button class="btn" style="padding:6px 9px;margin-top:5px;color:#c62838;border:1px solid #f0b8be" onclick="eliminarCuota(${p.id},${i})">🗑️ Eliminar cuota</button></div></div>`;
  }).join('');
  // Al cambiar de crédito, ambos paneles empiezan cerrados; pueden abrirse por separado.
  document.getElementById('panelAbonos').open=false;
  document.getElementById('panelCuotas').open=false;
+ appPendingNavKey='credit:'+pid;
  show('clienteDetalle');
 }
 
