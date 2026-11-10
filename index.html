@@ -186,7 +186,6 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
 </div>
 <div id="detalleDatos" class="card"></div>
 <div style="display:flex;gap:8px;margin:12px 0">
-  <button id="tabCuotas" class="btn primary" onclick="mostrarTabCredito('cuotas')">📋 Por cuota</button>
   <button id="tabAbonos" class="btn" onclick="mostrarTabCredito('abonos', creditoActualId)">💵 Abono</button>
 </div>
 <div id="panelCuotas">
@@ -1230,9 +1229,9 @@ function cerrarPagoResultado(){
 }
 
 function mostrarTabCredito(tab, pid){
- document.getElementById('panelCuotas').style.display=tab==='cuotas'?'block':'none';
+ // La lista/detalle de préstamos permanece visible; solo se alterna el historial de abonos.
+ document.getElementById('panelCuotas').style.display='block';
  document.getElementById('panelAbonos').style.display=tab==='abonos'?'block':'none';
- document.getElementById('tabCuotas').className=tab==='cuotas'?'btn primary':'btn';
  document.getElementById('tabAbonos').className=tab==='abonos'?'btn primary':'btn';
  if(tab==='abonos') renderTablaAbonos(pid || creditoActualId);
 }
