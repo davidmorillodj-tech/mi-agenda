@@ -390,6 +390,8 @@ const KEY='misCobrosV1_20261001';
 const REVISADOS_KEY='misCobrosRevisadosV1';
 let cobrosRevisados=JSON.parse(localStorage.getItem(REVISADOS_KEY)||'{}');
 function revisadoHoy(clienteId){ const hoy=dateStr(new Date()); return !!(cobrosRevisados[hoy]&&cobrosRevisados[hoy][clienteId]); }
+// Oculta al cliente del listado de cobros de hoy tras cualquier pago positivo. La deuda y las cuotas no se modifican.
+function marcarCobroAtendido(clienteId){ const hoy=dateStr(new Date()); if(!cobrosRevisados[hoy])cobrosRevisados[hoy]={}; cobrosRevisados[hoy][clienteId]=true; localStorage.setItem(REVISADOS_KEY,JSON.stringify(cobrosRevisados)); }
 function limpiarRevisadosAntiguos(){ const hoy=dateStr(new Date()); Object.keys(cobrosRevisados).forEach(f=>{if(f!==hoy)delete cobrosRevisados[f];}); localStorage.setItem(REVISADOS_KEY,JSON.stringify(cobrosRevisados)); }
 function mensajeNoPago(c){
   const fecha=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric',timeZone:'America/Lima'});
@@ -620,6 +622,7 @@ function registrarPagoCredito(pid,i){
  p.pagadas=p.cuotas.filter(x=>x.pagado>=x.monto-0.005).length;
  db.capital+=aplicado;
  db.pagos.push({id:Date.now(),fecha:dateStr(new Date()),clienteId:p.clienteId,monto:aplicado,recibido:+val,pid:p.id,cuotaInicial:q.i});
+ marcarCobroAtendido(p.clienteId);
  save();
  let fechaPago=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
  let mensaje=`Hola ${c.nombre}, recibimos tu pago de ${money(aplicado)} con fecha ${fechaPago}. El saldo pendiente de este crédito es de ${money(p.pendiente)}. Gracias.`;
@@ -1225,6 +1228,7 @@ function cobrarCredito(pid,modo='abono'){
  p.pendiente=+(p.cuotas.reduce((s,x)=>s+Math.max(0,x.monto-x.pagado),0));
  db.capital+=aplicado;
  db.pagos.push({id:Date.now(),fecha:dateStr(new Date()),clienteId:p.clienteId,monto:aplicado,recibido:aplicado,pid:p.id,cuotaInicial:1,creditoDirecto:true});
+ marcarCobroAtendido(p.clienteId);
  save();
  let fechaPago=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
  let mensaje=`Hola ${c.nombre}, recibimos tu pago de ${money(aplicado)} con fecha ${fechaPago}. El saldo pendiente de este crédito es de ${money(p.pendiente)}. Gracias.`;
@@ -1262,11 +1266,16 @@ function enviarNotificacion(tipo){
    let ps=db.prestamos.filter(x=>x.clienteId===clienteActualId && x.pendiente>0.005);
    let saldo=ps.reduce((s,x)=>s+x.pendiente,0);
    let fecha=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
-   let mensaje=tipo==='saldo'
-     ? `Hola ${c.nombre}, te informamos que tu saldo pendiente al ${fecha} es de ${money(saldo)}. Gracias.`
-     : tipo==='semanal'
-     ? `Hola ${c.nombre}, te recordamos que tienes un pago pendiente correspondiente a tu crédito. Por favor, realiza tu pago semanal en la fecha acordada. Tu saldo pendiente es de ${money(saldo)}. Gracias.`
-     : `Hola ${c.nombre}, te informamos que actualmente tienes un saldo pendiente de ${money(saldo)} y tu crédito se encuentra atrasado. Por favor, ponte al día con tu pago. Fecha: ${fecha}. Gracias.`;
+   let mensaje;
+   if(tipo==='saldo') mensaje=`Hola ${c.nombre}, te informamos que tu saldo pendiente al ${fecha} es de ${money(saldo)}. Gracias.`;
+   else if(tipo==='semanal') mensaje=`Hola ${c.nombre}, te recordamos que tienes un pago pendiente correspondiente a tu crédito. Por favor, realiza tu pago semanal en la fecha acordada. Tu saldo pendiente es de ${money(saldo)}. Gracias.`;
+   else if(tipo==='atraso'){
+     const cuotasAtrasadas=ps.reduce((n,pr)=>n+pr.cuotas.filter(q=>Number(q.pagado||0)<Number(q.monto||0)-0.005 && q.fecha<dateStr(new Date())).length,0);
+     mensaje=`Hola ${c.nombre}, registramos ${cuotasAtrasadas} cuota(s) de días anteriores que aún están pendientes. Tu saldo pendiente total es de ${money(saldo)}. Por favor, ponte al día. Fecha: ${fecha}. Gracias.`;
+   }else if(tipo==='vencimiento'){
+     const proximo=ps.map(pr=>pr.cuotas[pr.cuotas.length-1]).filter(Boolean).sort((a,b)=>a.fecha.localeCompare(b.fecha))[0];
+     mensaje=proximo?`Hola ${c.nombre}, te recordamos que la fecha de vencimiento de uno de tus créditos es el ${proximo.fecha}. Tu saldo pendiente total es de ${money(saldo)}. Te recomendamos completar el pago antes de esa fecha. Gracias.`:`Hola ${c.nombre}, tienes un saldo pendiente total de ${money(saldo)}. Consulta la fecha de vencimiento de tu crédito. Gracias.`;
+   }else mensaje=`Hola ${c.nombre}, tienes un saldo pendiente de ${money(saldo)}. Gracias.`;
    return abrirWhatsApp(c,mensaje);
  }
  let saldo=p.pendiente;
@@ -1533,7 +1542,7 @@ function renderCobrosHoyInicio(){
    const el=document.getElementById('tabCobros'+k.charAt(0).toUpperCase()+k.slice(1));
    if(el)el.className='btn'+(filtroCobrosHoy===k?' primary':'');
  });
- const infoRevisados=revisados.length?`<div class="small" style="margin:8px 0 10px;color:#666">${revisados.length} cliente(s) revisado(s) hoy y oculto(s) de esta lista. <button class="btn" style="padding:5px 8px;margin-left:4px" onclick="document.getElementById('revisadosHoy').style.display=document.getElementById('revisadosHoy').style.display==='none'?'block':'none'">Ver revisados</button></div><div id="revisadosHoy" style="display:none;margin-bottom:10px">${revisados.map(g=>`<div class="row"><div><b>${g.cliente.nombre}</b><div class="small">${g.atrasos} cuota(s) atrasada(s) · No pagó</div></div><button class="btn" style="padding:6px 9px" onclick="quitarCobroRevisado(${g.cliente.id})">↩ Mostrar</button></div>`).join('')}</div>`:'';
+ const infoRevisados=revisados.length?`<div class="small" style="margin:8px 0 10px;color:#666">${revisados.length} cliente(s) atendido(s) o revisado(s) hoy; se ocultan de esta lista hasta mañana. <button class="btn" style="padding:5px 8px;margin-left:4px" onclick="document.getElementById('revisadosHoy').style.display=document.getElementById('revisadosHoy').style.display==='none'?'block':'none'">Ver revisados</button></div><div id="revisadosHoy" style="display:none;margin-bottom:10px">${revisados.map(g=>`<div class="row"><div><b>${g.cliente.nombre}</b><div class="small">${g.atrasos} cuota(s) atrasada(s) · Atendido/revisado hoy</div></div><button class="btn" style="padding:6px 9px" onclick="quitarCobroRevisado(${g.cliente.id})">↩ Mostrar</button></div>`).join('')}</div>`:'';
  const filas=visibles.map(g=>`<div class="row" style="cursor:pointer" onclick="verCliente(${g.cliente.id})">
   <div><b>${g.cliente.nombre}</b><div class="small">${g.atrasos?g.atrasos+' cuota(s) atrasada(s)':'Cuota(s) programada(s) hoy'}${g.items.length>g.atrasos?' · '+(g.items.length-g.atrasos)+' de hoy':''} · ${g.diarios&&g.semanales?'Diario + semanal':(g.semanales?'Semanal':'Diario')}</div></div>
   <div style="text-align:right"><b>${money(g.monto)}</b><div class="small">Ver créditos ›</div><button class="btn" style="padding:6px 8px;margin-top:5px" onclick="event.stopPropagation();marcarCobroRevisado(${g.cliente.id})">🚫 No pagó</button></div>
@@ -1557,9 +1566,7 @@ function renderCobrosClientes(){
      if(q.fecha<dateStr(new Date()))g.atrasos++;
    }
  }));
- // Si el cliente ya fue marcado como revisado/«No pagó» hoy,
- // se oculta también de la sección general de Cobros hasta el día siguiente.
- let gs=Object.values(groups).filter(g=>!revisadoHoy(g.cliente.id));
+ let gs=Object.values(groups);
  listaCobros.innerHTML=gs.length?gs.map(g=>`<div class="row" style="cursor:pointer" onclick="verCliente(${g.cliente.id})">
    <div><b>${g.cliente.nombre}</b><div class="small">${g.items.length} cuota(s) pendiente(s)${g.atrasos?' · '+g.atrasos+' atrasada(s)':''}</div></div>
    <div style="text-align:right"><b>${money(g.monto)}</b><div class="small">Ver cuotas ›</div></div>
