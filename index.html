@@ -107,10 +107,10 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
 </div>
 
 <div class="dashboard-stats">
-  <div class="stat-box stat-blue"><b id="totalClientes">0</b><span>Clientes</span></div>
-  <div class="stat-box stat-green"><b id="clientesDia">0</b><span>Al día</span></div>
-  <div class="stat-box stat-orange"><b id="clientesAtrasados">0</b><span>Atrasados</span></div>
-  <div class="stat-box stat-red"><b id="creditosMora">0</b><span>En mora</span></div>
+  <button type="button" class="stat-box stat-blue" onclick="abrirEstadoClientes('activos')" style="cursor:pointer;border:0;font:inherit;appearance:none;color:inherit;text-align:center"><b id="totalClientes">0</b><span>Clientes activos</span></button>
+  <button type="button" class="stat-box stat-green" onclick="abrirEstadoClientes('alDia')" style="cursor:pointer;border:0;font:inherit;appearance:none;color:inherit;text-align:center"><b id="clientesDia">0</b><span>Al día</span></button>
+  <button type="button" class="stat-box stat-orange" onclick="abrirEstadoClientes('atrasados')" style="cursor:pointer;border:0;font:inherit;appearance:none;color:inherit;text-align:center"><b id="clientesAtrasados">0</b><span>Atrasados</span></button>
+  <button type="button" class="stat-box stat-red" onclick="abrirEstadoClientes('mora')" style="cursor:pointer;border:0;font:inherit;appearance:none;color:inherit;text-align:center"><b id="creditosMora">0</b><span>En mora</span></button>
 </div>
 
 <div class="card" style="margin-top:12px;cursor:pointer;border:1px solid #dbe4f2" onclick="show('zonas')">
@@ -157,6 +157,15 @@ section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px
   </div>
   <div class="small" style="margin:6px 0 12px">Clientes y créditos activos agrupados por distrito.</div>
   <div id="listaZonas" class="list"></div>
+</section>
+
+<section id="estadoClientes">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+    <h2 id="tituloEstadoClientes" style="margin:0">Clientes</h2>
+    <button class="btn" onclick="show('inicio')">← Inicio</button>
+  </div>
+  <div id="subtituloEstadoClientes" class="small" style="margin:7px 0 12px"></div>
+  <div id="listaEstadoClientes" class="list"></div>
 </section>
 
 <section id="clientes">
@@ -854,29 +863,65 @@ function renderHistorial(){
  }).join('')||'<div class="row">Sin movimientos.</div>';
 }
 
+function diasEntreFechas(fechaAnterior,fechaActual){
+ const a=String(fechaAnterior||'').split('-').map(Number), b=String(fechaActual||'').split('-').map(Number);
+ if(a.length!==3||b.length!==3||!a[0]||!b[0])return 0;
+ return Math.max(0,Math.floor((Date.UTC(b[0],b[1]-1,b[2])-Date.UTC(a[0],a[1]-1,a[2]))/86400000));
+}
+function resumenEstadoCliente(c,hoy=dateStr(new Date())){
+ const prestamos=db.prestamos.filter(p=>p.clienteId===c.id&&Number(p.pendiente||0)>0.005);
+ const cuotasVencidas=prestamos.flatMap(p=>(p.cuotas||[]).filter(q=>q.fecha<hoy&&Number(q.pagado||0)<Number(q.monto||0)-0.005));
+ if(!prestamos.length)return {cliente:c,estado:'sinCredito',dias:0,saldoVencido:0};
+ if(!cuotasVencidas.length)return {cliente:c,estado:'alDia',dias:0,saldoVencido:0};
+ const fechaMasAntigua=cuotasVencidas.reduce((min,q)=>!min||q.fecha<min?q.fecha:min,'');
+ const dias=diasEntreFechas(fechaMasAntigua,hoy);
+ const saldoVencido=cuotasVencidas.reduce((sum,q)=>sum+Math.max(0,Number(q.monto||0)-Number(q.pagado||0)),0);
+ return {cliente:c,estado:dias>=4?'mora':'atrasados',dias,saldoVencido,fecha:fechaMasAntigua};
+}
+function abrirEstadoClientes(tipo){
+ estadoClientesFiltro=tipo;
+ show('estadoClientes',{key:'estadoClientes:'+tipo});
+}
+let estadoClientesFiltro='todos';
+function renderEstadoClientes(){
+ const titulo=document.getElementById('tituloEstadoClientes');
+ const subtitulo=document.getElementById('subtituloEstadoClientes');
+ const lista=document.getElementById('listaEstadoClientes');
+ if(!titulo||!subtitulo||!lista)return;
+ const titulos={activos:'Clientes activos',todos:'Todos los clientes',alDia:'Clientes al día',atrasados:'Clientes atrasados',mora:'Clientes en mora'};
+ const descripciones={activos:'Clientes con al menos un crédito activo y saldo pendiente.',todos:'Listado completo de clientes registrados.',alDia:'Sin cuotas vencidas en sus créditos activos.',atrasados:'Tienen cuotas pendientes con 1 a 3 días de atraso.',mora:'Tienen al menos una cuota pendiente con 4 días o más de atraso.'};
+ titulo.textContent=titulos[estadoClientesFiltro]||titulos.todos;
+ subtitulo.textContent=descripciones[estadoClientesFiltro]||descripciones.todos;
+ const datos=db.clientes.map(c=>resumenEstadoCliente(c)).filter(x=>estadoClientesFiltro==='todos'?true:estadoClientesFiltro==='activos'?x.estado!=='sinCredito':estadoClientesFiltro==='alDia'?x.estado==='alDia':x.estado===estadoClientesFiltro);
+ datos.sort((a,b)=>b.dias-a.dias||a.cliente.nombre.localeCompare(b.cliente.nombre,'es'));
+ lista.innerHTML=datos.length?datos.map(x=>{
+   const c=x.cliente;
+   const detalle=x.estado==='mora'||x.estado==='atrasados'?`${x.dias} día(s) de atraso · Vencido: ${money(x.saldoVencido)}`:x.estado==='alDia'?'Sin cuotas vencidas':'Sin crédito activo';
+   const color=x.estado==='mora'?'#c62838':x.estado==='atrasados'?'#c47a00':x.estado==='alDia'?'#078453':'#64748b';
+   return `<div class="row" style="display:flex;align-items:center;justify-content:space-between;gap:9px;cursor:pointer" onclick="verCliente(${c.id})">
+     <div style="min-width:0;flex:1"><b>${c.nombre}</b><div class="small">${c.tel||'Sin teléfono'} · ${c.distrito||'Sin distrito'}</div><div class="small" style="color:${color};font-weight:600">${detalle}</div></div>
+     <button type="button" class="btn" title="Abrir WhatsApp" aria-label="Abrir WhatsApp" style="padding:5px 7px;min-width:34px;background:#e9f8ef;color:#168b48;border:1px solid #b9e7c9" onclick="event.stopPropagation();abrirWhatsApp(cliente(${c.id}))"><svg viewBox="0 0 32 32" width="19" height="19" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16 3.2A12.5 12.5 0 0 0 5.3 22.2L3.7 28l6-1.6A12.5 12.5 0 1 0 16 3.2Zm0 22.7a10.1 10.1 0 0 1-5.1-1.4l-.4-.2-3.5.9.9-3.4-.2-.4A10.1 10.1 0 1 1 16 25.9Zm5.6-7.6c-.3-.2-1.8-.9-2.1-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7.1a8.2 8.2 0 0 1-2.4-1.5 9 9 0 0 1-1.7-2.1c-.2-.3 0-.5.1-.7l.5-.6.2-.5c.1-.2 0-.4 0-.6s-.7-1.7-1-2.3c-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4s-1.2 1.2-1.2 2.8 1.2 3.2 1.4 3.4a11.5 11.5 0 0 0 4.4 4c.6.3 1.1.5 1.5.6.6.2 1.2.2 1.6.1.5-.1 1.8-.7 2.1-1.4.3-.7.3-1.3.2-1.4s-.2-.2-.5-.4Z"/></svg></button>
+   </div>`;
+ }).join(''):'<div class="row">No hay clientes en esta categoría.</div>';
+}
+
 function render(){
  let totalPrest=db.prestamos.reduce((s,p)=>s+p.capital,0), pend=db.prestamos.reduce((s,p)=>s+p.pendiente,0);
  let today=dateStr(new Date()), hoy=db.pagos.filter(x=>x.fecha===today).reduce((s,x)=>s+x.monto,0);
  let metaHoy=db.prestamos.reduce((s,p)=>s+p.cuotas.filter(q=>q.fecha===today).reduce((a,q)=>a+Math.max(0,q.monto-q.pagado),0),0);
 
- // Resumen de cuotas vencidas: se considera mora solo la parte pendiente
- // de cuotas cuya fecha de cobro ya pasó.
- let saldoMora=0, clientesAtrasados=new Set(), creditosMora=0;
- db.prestamos.forEach(p=>{
-   let tieneMora=false;
-   p.cuotas.forEach(q=>{
-     if(q.fecha<today && q.pagado < q.monto-0.005){
-       saldoMora += Math.max(0,q.monto-q.pagado);
-       tieneMora=true;
-       clientesAtrasados.add(p.clienteId);
-     }
-   });
-   if(tieneMora && p.pendiente>0.005) creditosMora++;
- });
- let clientesDia=db.clientes.filter(c=>{
-   let ps=db.prestamos.filter(p=>p.clienteId===c.id && p.pendiente>0.005);
-   return ps.length>0 && !ps.some(p=>p.cuotas.some(q=>q.fecha<today && q.pagado<q.monto-0.005));
- }).length;
+ // Clasificación por cliente: 1 a 3 días de atraso = Atrasado;
+ // 4 días o más = En mora. Se toma la cuota pendiente más antigua
+ // de cualquiera de sus créditos activos para asignar el nivel más grave.
+ let saldoMora=0;
+ const resumenEstados=db.clientes.map(c=>resumenEstadoCliente(c,today));
+ const clientesAtrasados=resumenEstados.filter(x=>x.estado==='atrasados');
+ const clientesMora=resumenEstados.filter(x=>x.estado==='mora');
+ const clientesDia=resumenEstados.filter(x=>x.estado==='alDia').length;
+ db.prestamos.forEach(p=>p.cuotas.forEach(q=>{
+   if(q.fecha<today && Number(q.pagado||0)<Number(q.monto||0)-0.005)
+     saldoMora += Math.max(0,Number(q.monto||0)-Number(q.pagado||0));
+ }));
 
  capital.textContent=money(db.capital);
  document.getElementById('metaHoy').textContent=money(metaHoy);
@@ -894,12 +939,13 @@ function render(){
    document.getElementById('historicoDetalle').textContent=`${db.prestamos.length} crédito(s) registrados · ${activos.length} activo(s) · ${terminados.length} terminado(s). Este dato es histórico y no modifica ni recalcula tus préstamos.`;
  }
  const moraCapital=document.getElementById('saldoMoraCapital'); if(moraCapital)moraCapital.textContent=money(saldoMora);
- document.getElementById('totalClientes').textContent=db.clientes.length;
+ document.getElementById('totalClientes').textContent=resumenEstados.filter(x=>x.estado!=='sinCredito').length;
  document.getElementById('clientesDia').textContent=clientesDia;
- document.getElementById('clientesAtrasados').textContent=clientesAtrasados.size;
- document.getElementById('creditosMora').textContent=creditosMora;
+ document.getElementById('clientesAtrasados').textContent=clientesAtrasados.length;
+ document.getElementById('creditosMora').textContent=clientesMora.length;
 
  renderClientes();
+ renderEstadoClientes();
  renderZonas();
  renderCreditosHoy();
  renderCobrosHoyInicio();
@@ -1301,7 +1347,11 @@ function abrirWhatsApp(c,mensaje){
  let telefono=(c.tel||'').replace(/\D/g,'');
  if(!telefono.length){alert('Este cliente no tiene un número de teléfono registrado.');return;}
  let numero=telefono.startsWith('51')?telefono:'51'+telefono;
- window.open('https://wa.me/'+numero+'?text='+encodeURIComponent(mensaje),'_blank');
+ let url='https://wa.me/'+numero;
+ // Si se proporciona un mensaje desde otra función, se conserva el comportamiento anterior.
+ // Desde el inicio se abre el chat limpio para que David pueda elegir y enviar su sticker.
+ if(typeof mensaje==='string' && mensaje.length) url+='?text='+encodeURIComponent(mensaje);
+ window.open(url,'_blank');
 }
 
 
@@ -1529,23 +1579,22 @@ function renderCobrosHoyInicio(){
  if(filtroCobrosHoy==='diarios') grupos=grupos.filter(g=>g.diarios>0);
  if(filtroCobrosHoy==='semanales') grupos=grupos.filter(g=>g.semanales>0);
  grupos.sort((a,b)=>a.cliente.nombre.localeCompare(b.cliente.nombre,'es'));
- const revisados=grupos.filter(g=>revisadoHoy(g.cliente.id));
- const pendientes=grupos.filter(g=>!revisadoHoy(g.cliente.id));
- const totalPaginas=Math.max(1,Math.ceil(pendientes.length/COBROS_HOY_POR_PAGINA));
+ // La lista muestra siempre a todos los clientes con cuotas pendientes.
+ // Solo desaparecen cuando sus cuotas quedan pagadas; abrir WhatsApp no cambia su estado.
+ const totalPaginas=Math.max(1,Math.ceil(grupos.length/COBROS_HOY_POR_PAGINA));
  if(paginaCobrosHoy>totalPaginas)paginaCobrosHoy=totalPaginas;
  const inicio=(paginaCobrosHoy-1)*COBROS_HOY_POR_PAGINA;
- const visibles=pendientes.slice(inicio,inicio+COBROS_HOY_POR_PAGINA);
+ const visibles=grupos.slice(inicio,inicio+COBROS_HOY_POR_PAGINA);
  const etiqueta=filtroCobrosHoy==='diarios'?'diarios':(filtroCobrosHoy==='semanales'?'semanales':'cobros');
  const resumen=document.getElementById('cobrosHoyResumen');
- if(resumen)resumen.innerHTML=`${pendientes.length} ${etiqueta} pendientes${revisados.length?` · ${revisados.length} revisado(s) hoy`:''}`;
+ if(resumen)resumen.innerHTML=`${grupos.length} ${etiqueta} pendientes`;
  ['todos','diarios','semanales'].forEach(k=>{
    const el=document.getElementById('tabCobros'+k.charAt(0).toUpperCase()+k.slice(1));
    if(el)el.className='btn'+(filtroCobrosHoy===k?' primary':'');
  });
- const infoRevisados=revisados.length?`<div class="small" style="margin:8px 0 10px;color:#666">${revisados.length} cliente(s) atendido(s) o revisado(s) hoy; se ocultan de esta lista hasta mañana. <button class="btn" style="padding:5px 8px;margin-left:4px" onclick="document.getElementById('revisadosHoy').style.display=document.getElementById('revisadosHoy').style.display==='none'?'block':'none'">Ver revisados</button></div><div id="revisadosHoy" style="display:none;margin-bottom:10px">${revisados.map(g=>`<div class="row"><div><b>${g.cliente.nombre}</b><div class="small">${g.atrasos} cuota(s) atrasada(s) · Atendido/revisado hoy</div></div><button class="btn" style="padding:6px 9px" onclick="quitarCobroRevisado(${g.cliente.id})">↩ Mostrar</button></div>`).join('')}</div>`:'';
  const filas=visibles.map(g=>`<div class="row" style="cursor:pointer" onclick="verCliente(${g.cliente.id})">
   <div><b>${g.cliente.nombre}</b><div class="small">${g.atrasos?g.atrasos+' cuota(s) atrasada(s)':'Cuota(s) programada(s) hoy'}${g.items.length>g.atrasos?' · '+(g.items.length-g.atrasos)+' de hoy':''} · ${g.diarios&&g.semanales?'Diario + semanal':(g.semanales?'Semanal':'Diario')}</div></div>
-  <div style="text-align:right"><b>${money(g.monto)}</b><div class="small">Ver créditos ›</div><button class="btn" style="padding:6px 8px;margin-top:5px" onclick="event.stopPropagation();marcarCobroRevisado(${g.cliente.id})">🚫 No pagó</button></div>
+  <div style="text-align:right"><b>${money(g.monto)}</b><div class="small">Ver créditos ›</div><button type="button" title="Abrir WhatsApp" aria-label="Abrir WhatsApp" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;margin-top:5px;border:0;border-radius:50%;background:#25D366;color:#fff;cursor:pointer;vertical-align:middle" onclick="event.stopPropagation();abrirWhatsApp(cliente(${g.cliente.id}))"><svg viewBox="0 0 32 32" width="19" height="19" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16 3.2A12.5 12.5 0 0 0 5.3 22.2L3.7 28l6-1.6A12.5 12.5 0 1 0 16 3.2Zm0 22.7a10.1 10.1 0 0 1-5.1-1.4l-.4-.2-3.5.9.9-3.4-.2-.4A10.1 10.1 0 1 1 16 25.9Zm5.6-7.6c-.3-.2-1.8-.9-2.1-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7.1a8.2 8.2 0 0 1-2.4-1.5 9 9 0 0 1-1.7-2.1c-.2-.3 0-.5.1-.7l.5-.6.2-.5c.1-.2 0-.4 0-.6s-.7-1.7-1-2.3c-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4s-1.2 1.2-1.2 2.8 1.2 3.2 1.4 3.4a11.5 11.5 0 0 0 4.4 4c.6.3 1.1.5 1.5.6.6.2 1.2.2 1.6.1.5-.1 1.8-.7 2.1-1.4.3-.7.3-1.3.2-1.4s-.2-.2-.5-.4Z"/></svg></button></div>
  </div>`).join('');
  let paginacion='';
  if(totalPaginas>1) paginacion=`<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 0 2px;flex-wrap:wrap">
@@ -1553,7 +1602,7 @@ function renderCobrosHoyInicio(){
   <span class="small">Página ${paginaCobrosHoy} de ${totalPaginas}</span>
   <button class="btn" style="padding:7px 10px" ${paginaCobrosHoy===totalPaginas?'disabled':''} onclick="paginaCobrosHoy++;renderCobrosHoyInicio()">Siguiente ›</button>
  </div>`;
- box.innerHTML=infoRevisados+(filas||'<div class="row">No hay cobros pendientes para esta categoría hoy.</div>')+paginacion;
+ box.innerHTML=(filas||'<div class="row">No hay cobros pendientes para esta categoría hoy.</div>')+paginacion;
 }
 
 function renderCobrosClientes(){
