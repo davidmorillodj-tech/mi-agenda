@@ -1557,7 +1557,9 @@ function renderCobrosClientes(){
      if(q.fecha<dateStr(new Date()))g.atrasos++;
    }
  }));
- let gs=Object.values(groups);
+ // Si el cliente ya fue marcado como revisado/«No pagó» hoy,
+ // se oculta también de la sección general de Cobros hasta el día siguiente.
+ let gs=Object.values(groups).filter(g=>!revisadoHoy(g.cliente.id));
  listaCobros.innerHTML=gs.length?gs.map(g=>`<div class="row" style="cursor:pointer" onclick="verCliente(${g.cliente.id})">
    <div><b>${g.cliente.nombre}</b><div class="small">${g.items.length} cuota(s) pendiente(s)${g.atrasos?' · '+g.atrasos+' atrasada(s)':''}</div></div>
    <div style="text-align:right"><b>${money(g.monto)}</b><div class="small">Ver cuotas ›</div></div>
