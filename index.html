@@ -966,8 +966,8 @@ function estadoCredito(p, hoy=dateStr(new Date())){
 
 function renderClientes(){
  let q=(document.getElementById('buscarCliente')?.value||'').trim().toLowerCase();
- // Mostrar únicamente clientes que conservan al menos un crédito con saldo pendiente.
- // Los clientes históricos o sin créditos activos permanecen guardados, pero no aparecen en esta cartera.
+ // Mostrar solo clientes con al menos un crédito que conserve saldo pendiente.
+ // Los clientes históricos permanecen guardados y sus créditos no se eliminan.
  let list=db.clientes.filter(c=>
    c.nombre.toLowerCase().includes(q) &&
    db.prestamos.some(p=>p.clienteId===c.id && Number(p.pendiente||0)>0.005)
@@ -1422,4 +1422,218 @@ function recalcularCreditoDesdeAbonos(pid){
 function editarCuota(pid,i){
  let p=db.prestamos.find(x=>x.id===pid), q=p?.cuotas[i]; if(!p||!q)return;
  let fecha=prompt(`Editar fecha de la cuota ${q.i}:`,q.fecha); if(fecha===null)return;
- let montoVal=prompt(`Editar monto de la cuota ${q.i}:\n\nPued
+ let montoVal=prompt(`Editar monto de la cuota ${q.i}:\n\nPuedes aumentarlo o reducirlo libremente, incluso por debajo de lo ya abonado.`,Number(q.monto)); if(montoVal===null)return;
+ let nuevoMonto=Math.round(+montoVal);
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){alert('La fecha debe tener formato AAAA-MM-DD.');return;}
+ if(!(nuevoMonto>0)){alert('El monto debe ser mayor que cero.');return;}
+ q.fecha=fecha; q.monto=+nuevoMonto;
+ // La edición de una cuota no modifica el dinero realmente cobrado.
+ // Solo cambia la obligación y se vuelve a distribuir lo aplicado sobre las cuotas restantes.
+ recalcularCreditoDesdeAbonos(pid);
+ save(); verCuotas(pid);
+}
+function eliminarCuota(pid,i){
+ let p=db.prestamos.find(x=>x.id===pid), q=p?.cuotas[i]; if(!p||!q)return;
+ if(!confirm(`¿Eliminar COMPLETAMENTE la cuota ${q.i}?\n\nFecha: ${q.fecha}\nMonto: ${money(q.monto)}\nAbonado en esta cuota: ${money(q.pagado||0)}\n\nLa cuota se eliminará aunque ya tenga abonos. El crédito se recalculará con las cuotas que queden.`))return;
+ p.cuotas.splice(i,1);
+ // Si queda alguna cuota, renumeramos. Si no queda ninguna, el crédito queda sin cuotas.
+ p.cuotas.forEach((cuota,idx)=>cuota.i=idx+1);
+ // Los pagos que comenzaron después de la cuota eliminada se desplazan una posición.
+ db.pagos.filter(x=>x.pid===pid).forEach(pago=>{
+   let inicio=Number(pago.cuotaInicial||1);
+   if(inicio>i+1)pago.cuotaInicial=inicio-1;
+   else if(inicio===i+1)pago.cuotaInicial=Math.min(i+1, Math.max(1,p.cuotas.length));
+ });
+ p.n=p.cuotas.length;
+ recalcularCreditoDesdeAbonos(pid);
+ save();
+ if(db.prestamos.some(x=>x.id===pid)) verCuotas(pid); else show('clienteDetalle');
+}
+function editarAbono(pid,pagoId){
+ let p=db.prestamos.find(x=>x.id===pid), pago=db.pagos.find(x=>x.id===pagoId && x.pid===pid); if(!p||!pago)return;
+ let actual=Number(pago.recibido ?? pago.monto ?? 0);
+ let val=prompt(`Editar abono del ${pago.fecha}.\nMonto registrado: ${money(actual)}\n\nEscribe el nuevo monto REAL recibido:`,actual);
+ if(val===null)return; val=Math.round(+val);
+ if(!(val>0)){alert('El abono debe ser mayor que cero.');return;}
+ let oldApplied=db.pagos.filter(x=>x.pid===pid).reduce((s,x)=>s+Number(x.monto||0),0);
+ pago.recibido=+val; pago.monto=+val;
+ let newApplied=recalcularCreditoDesdeAbonos(pid);
+ db.capital=+(db.capital + newApplied-oldApplied);
+ save(); verCuotas(pid); mostrarTabCredito('abonos',pid);
+}
+function eliminarAbono(pid,pagoId){
+ let p=db.prestamos.find(x=>x.id===pid), pago=db.pagos.find(x=>x.id===pagoId && x.pid===pid); if(!p||!pago)return;
+ let monto=Number(pago.recibido ?? pago.monto ?? 0);
+ if(!confirm(`¿Eliminar este abono?\n\nFecha: ${pago.fecha}\nMonto registrado: ${money(monto)}\n\nEl abono dejará de afectar este crédito y el saldo se recalculará.`))return;
+ let oldApplied=db.pagos.filter(x=>x.pid===pid).reduce((s,x)=>s+Number(x.monto||0),0);
+ db.pagos=db.pagos.filter(x=>x.id!==pagoId);
+ let newApplied=recalcularCreditoDesdeAbonos(pid);
+ db.capital=+(db.capital + newApplied-oldApplied);
+ save(); verCuotas(pid); mostrarTabCredito('abonos',pid);
+}
+function renderTablaAbonos(pid){
+ let p=db.prestamos.find(x=>x.id===pid);
+ if(!p){
+   tablaAbonos.innerHTML='<div class="card"><div class="small">No se encontró este crédito.</div></div>';
+   return;
+ }
+ let c=cliente(p.clienteId);
+ // Only payments explicitly assigned to this credit are shown.
+ let pagos=db.pagos.filter(x=>x.pid===pid).slice().reverse();
+ let saldoActual=p.pendiente;
+ let filas=[];
+ let saldoDespues=saldoActual;
+ for(let i=0;i<pagos.length;i++){
+   let pago=pagos[i];
+   let real=Number(pago.recibido ?? pago.monto ?? 0);
+   let aplicado=Number(pago.monto ?? 0);
+   let saldoAntes=+(saldoDespues+aplicado);
+   filas.push({id:pago.id,fecha:pago.fecha,monto:real,saldo:saldoDespues,saldoAntes,aplicado});
+   saldoDespues=saldoAntes;
+ }
+ let totalReal=pagos.reduce((s,p)=>s+Number(p.recibido ?? p.monto ?? 0),0);
+ tablaAbonos.innerHTML=`
+ <div class="card" style="overflow:auto">
+   <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:10px">
+     <b>${c.nombre}</b><span><b>Saldo del crédito:</b> ${money(saldoActual)}</span>
+   </div>
+   ${filas.length?`
+   <table style="width:100%;border-collapse:collapse;min-width:420px">
+    <thead><tr>
+      <th style="text-align:left;padding:9px;border-bottom:2px solid #e5eaf1">Fecha</th>
+      <th style="text-align:right;padding:9px;border-bottom:2px solid #e5eaf1">Abono</th>
+      <th style="text-align:right;padding:9px;border-bottom:2px solid #e5eaf1">Saldo</th>
+      <th style="text-align:center;padding:9px;border-bottom:2px solid #e5eaf1">Opciones</th>
+    </tr></thead>
+    <tbody>${filas.map(f=>`<tr>
+      <td style="padding:9px;border-bottom:1px solid #edf0f5">${f.fecha}</td>
+      <td style="padding:9px;text-align:right;border-bottom:1px solid #edf0f5"><b>${money(f.monto)}</b></td>
+      <td style="padding:9px;text-align:right;border-bottom:1px solid #edf0f5">${money(f.saldo)}</td>
+      <td style="padding:7px;text-align:center;border-bottom:1px solid #edf0f5;white-space:nowrap">
+        <button class="btn" style="padding:6px 8px" onclick="editarAbono(${pid},${f.id})">✏️</button>
+        <button class="btn" style="padding:6px 8px;color:#c62838;border:1px solid #f0b8be" onclick="eliminarAbono(${pid},${f.id})">🗑️</button>
+      </td>
+    </tr>`).join('')}</tbody>
+   </table>
+   <div style="margin-top:10px;text-align:right"><b>Total abonado: ${money(totalReal)}</b></div>
+   `:'<div class="small">Todavía no hay abonos registrados en este crédito.</div>'}
+ </div>`;
+}
+function verCuotas(pid){
+ creditoActualId=pid;
+ let p=db.prestamos.find(x=>x.id===pid);
+ if(!p)return;
+ let c=cliente(p.clienteId);
+ detalleNombre.textContent=`${c.nombre} · Crédito`;
+ document.getElementById('panelAbonos').hidden=false;
+ document.getElementById('panelCuotas').hidden=false;
+ const estado=estadoCredito(p);
+ const vencimiento=Array.isArray(p.cuotas)&&p.cuotas.length?p.cuotas.reduce((max,q)=>q.fecha>max?q.fecha:max,''):'';
+ const lineaEstado=estado.tipo==='vencido' ? `<div style="margin-top:7px;color:#c62838;font-weight:800">🔴 Crédito vencido · Venció el ${fmtFecha(vencimiento)}</div>` : estado.tipo==='atrasado' ? `<div style="margin-top:7px;color:#b26a00;font-weight:800">🟡 Atrasado · ${estado.atrasadas} cuota(s) vencida(s)</div>` : estado.tipo==='vigente' ? `<div style="margin-top:7px;color:#078453;font-weight:800">🟢 Crédito vigente</div>` : `<div style="margin-top:7px;color:#078453;font-weight:800">✅ Crédito terminado</div>`;
+ detalleDatos.innerHTML=`<b>Creado:</b> ${fmtFecha(p.inicio)||'—'} · <b>Capital:</b> ${money(p.capital)} · <b>Total:</b> ${money(p.total)} · <b>Saldo de este crédito:</b> ${money(p.pendiente)} ${lineaEstado}`;
+ detallePrestamos.innerHTML=`
+ <div class="card" style="margin-bottom:10px">
+   <div class="small">Este saldo corresponde únicamente a este crédito.</div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+     <button class="btn success" style="grid-column:1/-1" onclick="abonarCredito(${p.id})">💵 ABONAR</button>
+     <button class="btn" onclick="abrirNotificacionesCredito(${p.id})">🔔 NOTIFICACIONES</button>
+     <button class="btn" style="padding:0;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;font-size:18px" title="Editar crédito" aria-label="Editar crédito" onclick="editarCredito(${p.id})">✏️</button>
+     <button class="btn" style="padding:0;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;border:1px solid #f0b8be;color:#c62838;background:#fff5f6" title="Eliminar crédito" aria-label="Eliminar crédito" onclick="eliminarCredito(${p.id})">🗑️</button>
+   </div>
+ </div>`;
+ document.getElementById('listaCuotas').innerHTML=p.cuotas.map((q,i)=>{
+   let resto=Math.max(0,q.monto-q.pagado);
+   let estado=q.pagado>=q.monto?'paid':(q.fecha<dateStr(new Date())?'late':'pending');
+   let texto=q.pagado>=q.monto?'Pagado':(q.fecha<dateStr(new Date())?'Atrasado':(q.pagado?'Parcial':'Pendiente'));
+   return `<div class="row"><div><b>Cuota ${q.i}</b><div class="small">${q.fecha} · ${money(q.monto)}</div></div>
+     <div style="text-align:right"><span class="badge ${estado}">${texto}</span><br><button class="btn" style="padding:6px 9px;margin-top:5px" onclick="editarCuota(${p.id},${i})">✏️ Editar cuota</button><br><button class="btn" style="padding:6px 9px;margin-top:5px;color:#c62838;border:1px solid #f0b8be" onclick="eliminarCuota(${p.id},${i})">🗑️ Eliminar cuota</button></div></div>`;
+ }).join('');
+ // Al cambiar de crédito, ambos paneles empiezan cerrados; pueden abrirse por separado.
+ document.getElementById('panelAbonos').open=false;
+ document.getElementById('panelCuotas').open=false;
+ appPendingNavKey='credit:'+pid;
+ show('clienteDetalle');
+}
+
+let filtroCobrosHoy='todos';
+let paginaCobrosHoy=1;
+const COBROS_HOY_POR_PAGINA=20;
+
+function cambiarFiltroCobrosHoy(filtro){
+ filtroCobrosHoy=filtro;
+ paginaCobrosHoy=1;
+ renderCobrosHoyInicio();
+}
+
+function renderCobrosHoyInicio(){
+ const box=document.getElementById('cobrosHoy');
+ if(!box)return;
+ const today=dateStr(new Date());
+ const groupsHoy={};
+ db.prestamos.forEach(p=>p.cuotas.forEach((q,i)=>{
+   if(q.estado==='pagado'||!(q.fecha===today||q.fecha<today))return;
+   if(Math.max(0,Number(q.monto||0)-Number(q.pagado||0))<=0.005)return;
+   const cid=p.clienteId;
+   if(!groupsHoy[cid])groupsHoy[cid]={cliente:cliente(cid),items:[],monto:0,atrasos:0,diarios:0,semanales:0};
+   const g=groupsHoy[cid], resto=Math.max(0,Number(q.monto||0)-Number(q.pagado||0));
+   g.items.push({p,q,i}); g.monto+=resto;
+   if(q.fecha<today)g.atrasos++;
+   if(p.semanal)g.semanales++; else g.diarios++;
+ }));
+ let grupos=Object.values(groupsHoy).filter(g=>g.cliente);
+ if(filtroCobrosHoy==='diarios') grupos=grupos.filter(g=>g.diarios>0);
+ if(filtroCobrosHoy==='semanales') grupos=grupos.filter(g=>g.semanales>0);
+ grupos.sort((a,b)=>a.cliente.nombre.localeCompare(b.cliente.nombre,'es'));
+ // La lista muestra siempre a todos los clientes con cuotas pendientes.
+ // Solo desaparecen cuando sus cuotas quedan pagadas; abrir WhatsApp no cambia su estado.
+ const totalPaginas=Math.max(1,Math.ceil(grupos.length/COBROS_HOY_POR_PAGINA));
+ if(paginaCobrosHoy>totalPaginas)paginaCobrosHoy=totalPaginas;
+ const inicio=(paginaCobrosHoy-1)*COBROS_HOY_POR_PAGINA;
+ const visibles=grupos.slice(inicio,inicio+COBROS_HOY_POR_PAGINA);
+ const etiqueta=filtroCobrosHoy==='diarios'?'diarios':(filtroCobrosHoy==='semanales'?'semanales':'cobros');
+ const resumen=document.getElementById('cobrosHoyResumen');
+ if(resumen)resumen.innerHTML=`${grupos.length} ${etiqueta} pendientes`;
+ ['todos','diarios','semanales'].forEach(k=>{
+   const el=document.getElementById('tabCobros'+k.charAt(0).toUpperCase()+k.slice(1));
+   if(el)el.className='btn'+(filtroCobrosHoy===k?' primary':'');
+ });
+ const filas=visibles.map(g=>`<div class="row" style="cursor:pointer" onclick="verCliente(${g.cliente.id})">
+  <div><b>${g.cliente.nombre}</b><div class="small">${g.atrasos?g.atrasos+' cuota(s) atrasada(s)':'Cuota(s) programada(s) hoy'}${g.items.length>g.atrasos?' · '+(g.items.length-g.atrasos)+' de hoy':''} · ${g.diarios&&g.semanales?'Diario + semanal':(g.semanales?'Semanal':'Diario')}</div></div>
+  <div style="text-align:right"><b>${money(g.monto)}</b><div class="small">Ver créditos ›</div><div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;margin-top:5px"><button type="button" title="Abrir WhatsApp" aria-label="Abrir WhatsApp" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:#25D366;color:#fff;cursor:pointer" onclick="event.stopPropagation();abrirWhatsApp(cliente(${g.cliente.id}))"><svg viewBox="0 0 32 32" width="19" height="19" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16 3.2A12.5 12.5 0 0 0 5.3 22.2L3.7 28l6-1.6A12.5 12.5 0 1 0 16 3.2Zm0 22.7a10.1 10.1 0 0 1-5.1-1.4l-.4-.2-3.5.9.9-3.4-.2-.4A10.1 10.1 0 1 1 16 25.9Zm5.6-7.6c-.3-.2-1.8-.9-2.1-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7.1a8.2 8.2 0 0 1-2.4-1.5 9 9 0 0 1-1.7-2.1c-.2-.3 0-.5.1-.7l.5-.6.2-.5c.1-.2 0-.4 0-.6s-.7-1.7-1-2.3c-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4s-1.2 1.2-1.2 2.8 1.2 3.2 1.4 3.4a11.5 11.5 0 0 0 4.4 4c.6.3 1.1.5 1.5.6.6.2 1.2.2 1.6.1.5-.1 1.8-.7 2.1-1.4.3-.7.3-1.3.2-1.4s-.2-.2-.5-.4Z"/></svg></button><button type="button" class="btn" style="padding:6px 8px;font-size:12px;white-space:nowrap" onclick="event.stopPropagation();marcarCobroRevisado(${g.cliente.id})">No pagó</button></div></div>
+ </div>`).join('');
+ let paginacion='';
+ if(totalPaginas>1) paginacion=`<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 0 2px;flex-wrap:wrap">
+  <button class="btn" style="padding:7px 10px" ${paginaCobrosHoy===1?'disabled':''} onclick="paginaCobrosHoy--;renderCobrosHoyInicio()">‹ Anterior</button>
+  <span class="small">Página ${paginaCobrosHoy} de ${totalPaginas}</span>
+  <button class="btn" style="padding:7px 10px" ${paginaCobrosHoy===totalPaginas?'disabled':''} onclick="paginaCobrosHoy++;renderCobrosHoyInicio()">Siguiente ›</button>
+ </div>`;
+ box.innerHTML=(filas||'<div class="row">No hay cobros pendientes para esta categoría hoy.</div>')+paginacion;
+}
+
+function renderCobrosClientes(){
+ let groups={};
+ db.prestamos.forEach(p=>p.cuotas.forEach((q,i)=>{
+   if(q.pagado<q.monto){
+     if(!groups[p.clienteId])groups[p.clienteId]={cliente:cliente(p.clienteId),items:[],monto:0,atrasos:0};
+     let g=groups[p.clienteId], resto=q.monto-q.pagado;
+     g.items.push({p,q,i}); g.monto+=resto;
+     if(q.fecha<dateStr(new Date()))g.atrasos++;
+   }
+ }));
+ let gs=Object.values(groups);
+ listaCobros.innerHTML=gs.length?gs.map(g=>`<div class="row" style="cursor:pointer" onclick="verCliente(${g.cliente.id})">
+   <div><b>${g.cliente.nombre}</b><div class="small">${g.items.length} cuota(s) pendiente(s)${g.atrasos?' · '+g.atrasos+' atrasada(s)':''}</div></div>
+   <div style="text-align:right"><b>${money(g.monto)}</b><div class="small">Ver cuotas ›</div></div>
+ </div>`).join(''):'<div class="row">Todo al día 🎉</div>';
+}
+
+function rowCobro(x,full=false){
+ let late=x.q.fecha<dateStr(new Date()), c=cliente(x.p.clienteId), estado=late?'late':'pending', texto=late?'Atrasado':(x.q.pagado?'Parcial':'Pendiente');
+ return `<div class="row"><div><b>${c.nombre}</b><div class="small">Cuota ${x.q.i} · ${x.q.fecha}</div></div><div style="text-align:right"><b>${money(x.q.monto-x.q.pagado)}</b><br><span class="badge ${estado}">${texto}</span> <button class="btn success" style="padding:6px 9px" onclick="cobrar(${x.p.id},${x.i})">Cobrar</button></div></div>`;
+}
+render();
+setTimeout(notificacionJornada,800);
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script>
+</body>
+</html>
