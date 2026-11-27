@@ -1580,12 +1580,12 @@ function renderCobrosHoyInicio(){
    if(q.fecha<today)g.atrasos++;
    if(p.semanal)g.semanales++; else g.diarios++;
  }));
- let grupos=Object.values(groupsHoy).filter(g=>g.cliente);
+ let grupos=Object.values(groupsHoy).filter(g=>g.cliente && !revisadoHoy(g.cliente.id));
  if(filtroCobrosHoy==='diarios') grupos=grupos.filter(g=>g.diarios>0);
  if(filtroCobrosHoy==='semanales') grupos=grupos.filter(g=>g.semanales>0);
  grupos.sort((a,b)=>a.cliente.nombre.localeCompare(b.cliente.nombre,'es'));
- // La lista muestra siempre a todos los clientes con cuotas pendientes.
- // Solo desaparecen cuando sus cuotas quedan pagadas; abrir WhatsApp no cambia su estado.
+ // Los clientes marcados como 'No pagó' se ocultan de esta lista por el resto del día.
+ // Esto no modifica sus cuotas, pagos ni saldo; mañana vuelven a aparecer si siguen pendientes.
  const totalPaginas=Math.max(1,Math.ceil(grupos.length/COBROS_HOY_POR_PAGINA));
  if(paginaCobrosHoy>totalPaginas)paginaCobrosHoy=totalPaginas;
  const inicio=(paginaCobrosHoy-1)*COBROS_HOY_POR_PAGINA;
