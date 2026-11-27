@@ -1,0 +1,1425 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1456d8">
+<title>Mi Agenda</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1456d8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mi Agenda">
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#17233d}
+header{background:linear-gradient(135deg,#0e4fc8,#176ee8);color:#fff;padding:22px 18px 28px;border-radius:0 0 28px 28px}
+h1{margin:0;font-size:27px}header p{margin:5px 0 0;opacity:.85}
+.container{max-width:900px;margin:auto;padding:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card{background:#fff;border-radius:20px;padding:18px;box-shadow:0 5px 18px #173d7a12}
+.card.blue{background:linear-gradient(135deg,#1476ef,#2644d6);color:#fff}.card.green{background:linear-gradient(135deg,#08a86c,#11c27f);color:#fff}
+.label{font-size:14px;opacity:.8}.money{font-size:29px;font-weight:800;margin-top:7px}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.btn{border:0;border-radius:16px;padding:15px 8px;font-weight:700;font-size:14px;cursor:pointer;background:#fff;box-shadow:0 4px 14px #173d7a14}.primary{background:#176ee8;color:white}.success{background:#0db77a;color:white}.warn{background:#f3a900;color:white}
+nav{position:sticky;bottom:0;background:#fff;border-radius:22px 22px 0 0;padding:10px;display:grid;grid-template-columns:repeat(5,1fr);box-shadow:0 -4px 18px #00000012}.navbtn{border:0;background:none;padding:10px 2px;font-weight:700;color:#6b7485}.navbtn.active{color:#145fe0}
+section{display:none}.active-section{display:block}
+.list{background:#fff;border-radius:18px;margin-top:12px;overflow:hidden}.row{padding:14px 16px;border-bottom:1px solid #edf0f5;display:flex;justify-content:space-between;gap:10px}.row:last-child{border:0}
+.badge{padding:6px 10px;border-radius:99px;font-size:12px;font-weight:700}.paid{background:#dff8ec;color:#078453}.pending{background:#fff0d0;color:#9a6500}.late{background:#ffe0e5;color:#c52b44}
+form{background:#fff;padding:18px;border-radius:20px;box-shadow:0 5px 18px #173d7a12}label{font-size:13px;font-weight:700;display:block;margin:10px 0 5px}input,select{width:100%;padding:12px;border:1px solid #dbe2ed;border-radius:12px;font-size:16px}h2{margin:12px 0}
+.small{font-size:12px;color:#707b8d}.danger{color:#c52b44}
+.dashboard-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.stat-box{background:#fff;border:1px solid #e5ebf4;border-radius:18px;padding:14px 8px;text-align:center;box-shadow:0 3px 12px #173d7a0a}
+.stat-box b{display:block;font-size:25px;line-height:1.1;margin-bottom:7px}
+.stat-box span{font-size:13px;color:#707b8d}
+.stat-blue{border-color:#d8e5fa}.stat-blue b{color:#176ee8}
+.stat-green{border-color:#d4f1e5}.stat-green b{color:#0aa875}
+.stat-orange{border-color:#f5e6bf}.stat-orange b{color:#e39a00}
+.stat-red{border-color:#f4d9dd}.stat-red b{color:#d94250}
+.report-toolbar{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:10px 0}.report-toolbar .btn{padding:11px 6px}.report-table{width:100%;border-collapse:collapse;min-width:650px;font-size:12px}.report-table th{background:#172b46;color:#fff;padding:8px;text-align:left}.report-table td{padding:7px;border-bottom:1px solid #e5e9ef}.report-table td.num,.report-table th.num{text-align:right}.report-total{background:#dff8ec;font-weight:700}.report-blue{background:#dceeff}.report-card{overflow:auto;border:1px solid #e0e6ef;border-radius:12px;margin-top:12px}.report-stat{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border:1px solid #aeb4c8;border-radius:14px;overflow:hidden;background:#f8f7ff}.report-stat>div{padding:13px 8px;text-align:center;border-right:1px solid #9ca3bd}.report-stat>div:last-child{border-right:0}.report-stat b{display:block;font-size:18px;margin-bottom:4px}.report-stat span{font-size:11px;color:#707b8d}.report-head{background:#172b46;color:#fff;border-radius:0 0 24px 24px;padding:20px 18px}.report-head h2{margin:0 0 5px;color:#fff}.report-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.report-date-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}.report-note{font-size:11px;color:#6b7485;margin-top:8px}.summary-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.summary-pair>.card{margin:0;min-width:0}
+@media(max-width:600px){.summary-pair{grid-template-columns:1fr}}
+@media(max-width:600px){.report-toolbar{grid-template-columns:repeat(3,1fr)}.report-stat{grid-template-columns:repeat(2,1fr)}.report-stat>div:nth-child(2n){border-right:0}.report-stat>div{border-bottom:1px solid #9ca3bd}.report-date-fields{grid-template-columns:1fr}.report-table{font-size:11px}}
+#reportePreviewModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:100;overflow:auto;padding:18px}.preview-shell{max-width:900px;margin:0 auto;background:#fff;border-radius:14px;min-height:90vh;box-shadow:0 15px 45px rgba(0,0,0,.35)}.preview-top{position:sticky;top:0;z-index:2;background:#fff;border-bottom:1px solid #e4e7ee;padding:12px 14px;display:flex;gap:8px;justify-content:space-between;align-items:center}.preview-actions{display:flex;gap:7px}.preview-body{padding:16px}.preview-label{font-size:12px;color:#697386;margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+@media print{body{background:#fff!important}.container{padding:0!important;max-width:none!important}body>header,body>nav,.container>section:not(#reporteDetalle){display:none!important}#reporteDetalle{display:block!important;position:static!important;box-shadow:none!important;padding:0!important;margin:0!important}.no-print{display:none!important}.report-head{border-radius:0!important}.report-card{overflow:visible!important;border:0!important}.report-table{min-width:0!important;font-size:10px}.report-table th,.report-table td{padding:5px}.report-note{font-size:9px}}
+@media(max-width:520px){.dashboard-stats{gap:7px}.stat-box{padding:12px 4px}.stat-box b{font-size:22px}.stat-box span{font-size:11px}}
+@media(min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}.actions{grid-template-columns:repeat(4,1fr)}}
+
+/* Estilo Mi Agenda */
+:root{--ink:#17233d;--muted:#6d7890;--line:#e7ebf3;--primary:#3157d5;--primary2:#6b5ce7;--bg:#f5f7fb}
+body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:radial-gradient(circle at top,#eef3ff 0,#f7f8fc 34%,#f4f6fa 100%);color:var(--ink)}
+header{background:linear-gradient(135deg,#182c63 0%,#3157d5 58%,#6b5ce7 100%);padding:20px 18px 25px;border-radius:0 0 30px 30px;box-shadow:0 8px 28px #182c6330;position:relative;overflow:hidden}
+header:after{content:"";position:absolute;width:180px;height:180px;border-radius:50%;right:-70px;top:-95px;background:#ffffff18}
+.brand{display:flex;align-items:center;gap:12px;position:relative;z-index:1}.brandIcon{width:48px;height:48px;border-radius:15px;background:#ffffff20;border:1px solid #ffffff35;display:grid;place-items:center;font-size:25px;box-shadow:inset 0 1px #ffffff35}.brand h1{font-size:26px;letter-spacing:-.5px}.brand p{font-size:13px;margin-top:3px;opacity:.82}
+.container{max-width:900px;margin:auto;padding:15px}.card{border:1px solid #e9edf5;border-radius:22px;box-shadow:0 8px 24px #253a6b0d;background:#fff}.card.blue{background:linear-gradient(135deg,#3157d5,#4a62e8);box-shadow:0 10px 26px #3157d52b}.card.green{background:linear-gradient(135deg,#159b72,#24bf91);box-shadow:0 10px 26px #159b7225}
+.btn{border:1px solid #e7ebf3;border-radius:15px;transition:transform .15s,box-shadow .15s}.btn:active{transform:scale(.98)}.primary{background:linear-gradient(135deg,#3157d5,#4d67e8);box-shadow:0 6px 15px #3157d52b}.actions{gap:9px}
+input,select,textarea{border:1px solid #dfe5ef!important;border-radius:13px!important;background:#fbfcfe!important;padding:12px!important;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#6a7fe0!important;box-shadow:0 0 0 3px #3157d512}
+section h2{letter-spacing:-.3px}.label{color:inherit}.money{letter-spacing:-.6px}
+</style>
+</head>
+<body>
+<header><div class="brand"><div class="brandIcon">✦</div><div><h1>Mi Agenda</h1><p>Tu espacio personal de organización</p></div></div></header>
+<div class="container">
+
+<section id="inicio" class="active-section">
+<div class="grid">
+<div class="card blue">
+  <div class="label">Capital disponible</div>
+  <div class="money" id="capital">S/ 0.00</div>
+  <div class="small" style="margin-top:8px">Saldo en mora <b id="saldoMoraCapital">S/ 0.00</b></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px">
+    <button class="btn success" onclick="ingresarCapital()">➕ Ingresar capital</button>
+    <button class="btn warn" onclick="retirarCapital()">➖ Retiro / gasto</button>
+  </div>
+</div>
+<div class="card green" style="display:flex;flex-direction:column;justify-content:center;gap:12px;cursor:pointer" onclick="abrirReporteCobradoHoy()" title="Ver estadística y reporte de cobros">
+  <div>
+    <div class="label">💰 Cobrado hoy</div>
+    <div class="money" id="hoy">S/ 0.00</div>
+  </div>
+  <div style="border-top:1px solid rgba(255,255,255,.28);padding-top:10px">
+    <div class="label">🎯 Meta de recaudación</div>
+    <div class="money" id="metaHoy">S/ 0.00</div>
+    <div class="small" style="margin-top:3px;color:#fff;opacity:.9">Cuotas programadas para hoy</div>
+  </div>
+</div>
+</div>
+
+<div class="summary-pair">
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+    <div>
+      <b style="font-size:18px">💳 Total en créditos</b>
+      <div class="small">Saldo pendiente en todos los créditos activos</div>
+    </div>
+    <div class="money" id="pendiente" style="color:#1456d8">S/ 0.00</div>
+  </div>
+</div>
+</div>
+
+<div class="card" style="margin-top:12px;border:2px solid #1456d8;background:linear-gradient(135deg,#f4f8ff,#fff)">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <div>
+      <b style="font-size:19px">🧾 Valor total de la ruta</b>
+      <div class="small">Balance de caja + saldo pendiente en créditos</div>
+      <div class="small" style="margin-top:5px">Caja: <b id="rutaCaja">S/ 0.00</b> · Créditos: <b id="rutaCreditos">S/ 0.00</b></div>
+    </div>
+    <div class="money" id="valorRuta" style="color:#1456d8;font-size:24px">S/ 0.00</div>
+  </div>
+</div>
+
+<div class="dashboard-stats">
+  <button type="button" class="stat-box stat-blue" onclick="abrirEstadoClientes('activos')" style="cursor:pointer;border:0;font:inherit;appearance:none;color:inherit;text-align:center"><b id="totalClientes">0</b><span>Clientes activos</span></button>
+  <button type="button" class="stat-box stat-green" onclick="abrirEstadoClientes('alDia')" style="cursor:pointer;border:0;font:inherit;appearance:none;color:inherit;text-align:center"><b id="clientesDia">0</b><span>Al día</span></button>
+  <button type="button" class="stat-box stat-orange" onclick="abrirEstadoClientes('atrasados')" style="cursor:pointer;border:0;font:inherit;appearance:none;color:inherit;text-align:center"><b id="clientesAtrasados">0</b><span>Atrasados</span></button>
+  <button type="button" class="stat-box stat-red" onclick="abrirEstadoClientes('mora')" style="cursor:pointer;border:0;font:inherit;appearance:none;color:inherit;text-align:center"><b id="creditosMora">0</b><span>En mora</span></button>
+</div>
+
+<div class="card" style="margin-top:12px;cursor:pointer;border:1px solid #dbe4f2" onclick="show('zonas')">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <div><b style="font-size:18px">🗺️ Zonas</b><div class="small">Clientes y créditos activos por distrito</div></div>
+    <span style="font-size:24px">›</span>
+  </div>
+</div>
+
+<div class="actions">
+<button class="btn success" onclick="show('cobros')">💰 Cobrar</button>
+<button class="btn primary" onclick="show('nuevo')">💸 Prestar</button>
+<button class="btn" onclick="show('clientes')">👤 Clientes</button>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px">
+  <h2 style="margin:0">📅 Cobros de hoy</h2>
+  <button class="btn" style="box-shadow:none;background:none;color:#1456d8;padding:6px" onclick="show('cobros')">Ver todos ›</button>
+</div>
+<div id="cobrosHoyTabs" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0 8px">
+  <button id="tabCobrosTodos" class="btn primary" style="padding:8px 6px" onclick="cambiarFiltroCobrosHoy('todos')">TODOS</button>
+  <button id="tabCobrosDiarios" class="btn" style="padding:8px 6px" onclick="cambiarFiltroCobrosHoy('diarios')">DIARIOS</button>
+  <button id="tabCobrosSemanales" class="btn" style="padding:8px 6px" onclick="cambiarFiltroCobrosHoy('semanales')">SEMANALES</button>
+</div>
+<div id="cobrosHoyResumen" class="small" style="margin:0 2px 8px;color:#666"></div>
+<div id="cobrosHoy" class="list"></div>
+
+<!-- Seguridad y respaldo: acceso visible desde Inicio -->
+<div id="seguridadInicio" class="card" style="margin-top:18px;margin-bottom:18px">
+  <h3 style="margin:0 0 6px">🛡️ Seguridad y respaldo</h3>
+  <div class="small" style="margin-bottom:10px">Crea una copia de todos tus clientes, créditos, pagos y movimientos para poder recuperarlos si cambias de teléfono o borras el navegador.</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <button class="btn primary" type="button" onclick="hacerBackup();return false">💾 Crear backup</button>
+    <button class="btn" type="button" onclick="const f=document.getElementById('archivoBackup');f.value='';f.click();return false">♻️ Recuperar backup</button>
+  </div>
+  <div id="backupInfo" class="small" style="margin-top:9px;opacity:.75"></div>
+</div>
+</section>
+
+<section id="zonas">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+    <h2 style="margin:0">🗺️ Zonas</h2>
+    <button class="btn" onclick="show('inicio')">← Inicio</button>
+  </div>
+  <div class="small" style="margin:6px 0 12px">Clientes y créditos activos agrupados por distrito.</div>
+  <div id="listaZonas" class="list"></div>
+</section>
+
+<section id="estadoClientes">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+    <h2 id="tituloEstadoClientes" style="margin:0">Clientes</h2>
+    <button class="btn" onclick="show('inicio')">← Inicio</button>
+  </div>
+  <div id="subtituloEstadoClientes" class="small" style="margin:7px 0 12px"></div>
+  <div id="listaEstadoClientes" class="list"></div>
+</section>
+
+<section id="clientes">
+<h2>Clientes</h2>
+<button class="btn primary" style="width:100%;margin-bottom:10px" onclick="show('nuevoCliente')">➕ Crear cliente nuevo</button>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<input id="buscarCliente" placeholder="🔎 Buscar por nombre..." oninput="renderClientes()" style="flex:1;min-width:220px">
+</div>
+<div id="listaClientes" class="list"></div>
+</section>
+
+<section id="clienteDetalle">
+<button class="btn" onclick="show('clientes')">← Clientes</button>
+<h2 id="detalleNombre">Cliente</h2>
+<div id="saldoPanel" class="card green" style="margin:10px 0">
+  <div class="label">Saldo pendiente</div>
+  <div class="money" id="saldoDetalle">S/ 0.00</div>
+</div>
+<div style="text-align:right;margin:-4px 0 10px">
+  <button class="btn" style="background:none;box-shadow:none;padding:5px;font-size:12px;color:#176ee8" onclick="abrirNotificaciones()">🔔 Notificaciones</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+  <button class="btn" onclick="editarClienteActual()">✏️ EDITAR DATOS</button>
+  <button id="btnPrestarCliente" class="btn primary" onclick="prestarACliente()">💰 PRESTAR</button>
+  <button id="btnCobrarCliente" class="btn success" onclick="cobrarCliente()">💵 ABONAR</button>
+  <button class="btn" style="border:1px solid #f0b8be;color:#c62838;background:#fff5f6" onclick="eliminarClienteActual()">🗑️ ELIMINAR CLIENTE</button>
+</div>
+<div id="detalleDatos" class="card"></div>
+<div id="panelPrestamos" style="margin-top:12px">
+  <h2>Préstamos</h2>
+  <div id="detallePrestamos" class="list"></div>
+</div>
+<details id="panelAbonos" ontoggle="if(this.open && creditoActualId!==null) renderTablaAbonos(creditoActualId)" style="margin-top:12px;background:#fff;border:1px solid #e5eaf1;border-radius:16px;padding:12px">
+  <summary style="cursor:pointer;font-weight:800;font-size:18px;color:#1e293b">💵 Historial de abono</summary>
+  <div id="tablaAbonos" style="margin-top:10px"></div>
+</details>
+<details id="panelCuotas" style="margin-top:12px;background:#fff;border:1px solid #e5eaf1;border-radius:16px;padding:12px">
+  <summary style="cursor:pointer;font-weight:800;font-size:18px;color:#1e293b">📋 Cuotas</summary>
+  <div id="listaCuotas" class="list" style="margin-top:10px"></div>
+</details>
+</section>
+
+<section id="editarCliente">
+<h2>Editar cliente</h2>
+<form onsubmit="guardarEdicionCliente(event)">
+<label>Nombre</label><input id="enombre" required>
+<label>DNI / Identificación</label><input id="edni" inputmode="numeric" required>
+<label>Teléfono</label><input id="etel" inputmode="tel">
+<label>Dirección exacta</label><input id="edir" required>
+<label>Barrio / Distrito</label><input id="edistrito" required>
+<button class="btn primary" style="margin-top:15px;width:100%">Guardar cambios</button>
+</form>
+</section>
+
+<section id="nuevoCliente">
+<h2>Nuevo cliente</h2>
+<form onsubmit="crearCliente(event)">
+<label>Nombre</label><input id="cnombre" required>
+<label>DNI / Identificación</label><input id="cdni" inputmode="numeric" required>
+<label>Teléfono</label><input id="ctel" inputmode="tel">
+<label>Dirección exacta</label><input id="cdir" required>
+<label>Barrio / Distrito</label><input id="cdistrito" required>
+<button class="btn primary" style="margin-top:15px;width:100%">Guardar cliente</button>
+</form>
+</section>
+
+<div id="notificacionesModal" style="display:none;position:fixed;inset:0;background:#0008;z-index:40;align-items:center;justify-content:center;padding:18px">
+  <div class="card" style="max-width:430px;width:100%">
+    <h2 style="margin-top:0">🔔 Notificaciones</h2>
+    <p class="small">Elige el mensaje que quieres enviar a este cliente.</p>
+    <button class="btn primary" style="width:100%;margin:6px 0" onclick="enviarNotificacion('saldo')">💰 Enviar solo saldo</button>
+    <button class="btn primary" style="width:100%;margin:6px 0" onclick="enviarNotificacion('semanal')">📅 Recordatorio de pago semanal</button>
+    <button class="btn warn" style="width:100%;margin:6px 0" onclick="enviarNotificacion('atraso')">⚠️ Notificación de retraso</button>
+    <button class="btn" style="width:100%;margin:6px 0" onclick="enviarNotificacion('vencimiento')">📆 Crédito por vencer</button>
+    <button class="btn" style="width:100%;margin-top:8px" onclick="cerrarNotificaciones()">Cerrar</button>
+  </div>
+</div>
+
+<div id="pagoResultado" style="display:none;position:fixed;inset:0;background:#0008;z-index:30;align-items:center;justify-content:center;padding:18px">
+  <div class="card" style="max-width:430px;width:100%">
+    <h2 style="margin-top:0">✅ Pago registrado</h2>
+    <div id="pagoResultadoTexto"></div>
+    <button id="btnEnviarSaldo" class="btn success" style="width:100%;margin:12px 0 8px">📲 Enviar saldo por WhatsApp</button>
+    <button class="btn" style="width:100%" onclick="cerrarPagoResultado()">Cerrar</button>
+  </div>
+</div>
+
+<div id="creditoModal" style="display:none;position:fixed;inset:0;background:#0008;z-index:20;align-items:center;justify-content:center;padding:18px">
+  <div class="card" style="max-width:420px;width:100%;text-align:center">
+    <h2 style="margin-top:0">¿Crear crédito?</h2>
+    <p id="creditoModalTexto">El cliente fue creado correctamente.</p>
+    <button class="btn success" style="width:100%;margin-bottom:8px" onclick="crearCreditoNuevoCliente()">💰 Sí, crear crédito</button>
+    <button class="btn" style="width:100%" onclick="cerrarCreditoModal()">Ahora no</button>
+  </div>
+</div>
+
+<section id="nuevo">
+<h2>Nuevo préstamo</h2>
+<form onsubmit="crearPrestamo(event)">
+<label>Cliente</label><select id="pcliente" required></select>
+<label>Capital prestado (S/)</label><input id="monto" type="number" min="1" step="0.01" required>
+<label>Interés</label><select id="interes"><option value="0">0%</option><option value="5">5%</option><option value="10">10%</option><option value="15">15%</option><option value="20">20%</option></select>
+<label>Modalidad</label><select id="modalidad"><option value="24">Diario · 24 días</option><option value="30">Diario · 30 días</option><option value="1">Semanal · 1 semana</option><option value="2">Semanal · 2 semanas</option><option value="3">Semanal · 3 semanas</option><option value="4">Semanal · 4 semanas</option></select>
+<div class="card" style="margin-top:14px;padding:14px;background:#f8fafc;border:1px solid #e5e7eb">
+  <h3 style="margin:0 0 10px">📅 Fechas del crédito</h3>
+  <label>Fecha de creación del crédito</label>
+  <input id="fechaCreacion" type="date" required>
+  <label>Fecha del primer pago</label>
+  <input id="fechaPrimerPago" type="date" required>
+  <p class="small" style="margin:8px 0 0">El cronograma se generará automáticamente desde el primer pago. Los pagos diarios saltan los domingos; los semanales se generan cada 7 días.</p>
+  <div id="vistaPreviaCronograma" class="card" style="margin-top:12px;padding:12px;background:#fff;border:1px solid #dbe3ec"></div>
+</div>
+<button class="btn success" style="margin-top:15px;width:100%">Crear préstamo</button>
+<p class="small">Puedes elegir libremente la fecha de creación y la fecha del primer pago. Los domingos no generan cuota. Se permiten abonos anticipados.</p>
+</form>
+</section>
+
+<section id="cobros">
+<h2>Cobros</h2><div id="listaCobros" class="list"></div>
+</section>
+
+<input id="archivoBackup" type="file" accept="application/json,.json" style="display:none" onchange="recuperarBackup(event)">
+
+<section id="creditosHoy">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+  <div>
+    <h2 style="margin:0">📅 Créditos de hoy</h2>
+    <div class="small" style="margin-top:4px">Solo préstamos creados en la fecha de hoy.</div>
+  </div>
+  <button class="btn" onclick="show('inicio')">← Inicio</button>
+</div>
+<div id="creditosHoyResumen" class="card" style="margin-top:12px"></div>
+<div id="creditosHoyLista" class="list"></div>
+</section>
+
+<section id="historial">
+<h2>Historial</h2>
+<div class="card" style="margin:10px 0 12px;border:1px solid #dbe4f2;background:linear-gradient(135deg,#f7faff,#fff)">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <div>
+      <b style="font-size:18px">📚 Histórico de préstamos</b>
+      <div class="small">Capital total que has prestado desde el primer crédito registrado, incluyendo créditos activos y ya terminados.</div>
+    </div>
+    <div class="money" id="historicoPrestado" style="color:#1456d8;font-size:22px">S/ 0.00</div>
+  </div>
+  <div id="historicoDetalle" class="small" style="margin-top:9px"></div>
+</div>
+<div class="card" style="margin:10px 0 12px">
+  <label style="margin-top:0">🔎 Buscar en el historial</label>
+  <input id="buscarHistorial" placeholder="Buscar cliente, DNI o pago..." oninput="renderHistorial()" autocomplete="off">
+  <div class="small" style="margin-top:6px">Escribe el nombre o DNI de un cliente para ver rápidamente los pagos que ha realizado.</div>
+</div>
+<div id="historialList" class="list"></div>
+</section>
+
+<section id="reporteDetalle">
+  <div class="report-head">
+    <div style="font-size:24px;font-weight:800">✦ MI AGENDA</div>
+    <div style="opacity:.85;margin-top:4px">Reporte de gestión y cobranzas</div>
+    <hr style="border:0;border-top:1px solid #ffffff55;margin:16px 0">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:end">
+      <div><h2 id="reporteTitulo">REPORTE DIARIO</h2><div id="reportePeriodo" style="opacity:.85"></div></div>
+      <div style="background:#5d61ee;border-radius:12px;padding:8px 14px;text-align:center"><div style="font-size:10px">DOC. No.</div><b id="reporteDocNo" style="font-size:18px">00001</b></div>
+    </div>
+  </div>
+
+  <div class="card no-print" style="margin-top:12px">
+    <b>📑 Tipo de reporte</b>
+    <div class="report-toolbar" style="grid-template-columns:repeat(3,1fr)">
+      <button class="btn primary" onclick="seleccionarTipoReporte('general')">📊 General</button>
+      <button class="btn" onclick="seleccionarTipoReporte('gastos')">➖ Gastos</button>
+      <button class="btn" onclick="seleccionarTipoReporte('prestamos')">💸 Préstamos</button>
+    </div>
+    <b style="display:block;margin-top:12px">📊 Periodo del reporte</b>
+    <div class="report-toolbar">
+      <button class="btn primary" onclick="seleccionarReporte('hoy')">Hoy</button>
+      <button class="btn" onclick="seleccionarReporte('fecha')">Otra fecha</button>
+      <button class="btn" onclick="seleccionarReporte('semana')">Esta semana</button>
+      <button class="btn" onclick="seleccionarReporte('mes')">Este mes</button>
+      <button class="btn" onclick="seleccionarReporte('personalizado')">Personalizado</button>
+    </div>
+    <div id="reporteFechaUnica" style="display:none"><label>Fecha</label><input id="reporteFecha" type="date" onchange="actualizarReporteDesdeControles()"></div>
+    <div id="reporteFechasPersonalizadas" class="report-date-fields" style="display:none">
+      <div><label>Desde</label><input id="reporteDesde" type="date" onchange="actualizarReporteDesdeControles()"></div>
+      <div><label>Hasta</label><input id="reporteHasta" type="date" onchange="actualizarReporteDesdeControles()"></div>
+    </div>
+    <div class="report-actions">
+      <button class="btn primary" onclick="abrirVistaPreviaReporte()">👁️ Ver vista previa</button>
+      <button class="btn success" onclick="abrirVistaPreviaReporte()">📄 Revisar y generar PDF</button>
+      <button class="btn" onclick="show('inicio')">← Volver</button>
+    </div>
+    <div class="report-note">El PDF se prepara en formato imprimible. En Android selecciona <b>Guardar como PDF</b> en la ventana de impresión.</div>
+  </div>
+
+  <div id="reporteResumen" style="margin-top:12px"></div>
+  <div id="reporteContenido"></div>
+</section>
+
+<div id="reportePreviewModal" onclick="if(event.target===this)cerrarVistaPrevia()">
+  <div class="preview-shell">
+    <div class="preview-top">
+      <div><b>👁️ Vista previa del reporte</b><div class="small">Así se verá antes de generar el PDF</div></div>
+      <div class="preview-actions">
+        <button class="btn" onclick="cerrarVistaPrevia()">✕ Cerrar</button>
+        <button class="btn success" onclick="imprimirReporteDesdeVistaPrevia()">📄 Generar PDF</button>
+      </div>
+    </div>
+    <div class="preview-body">
+      <div class="preview-label">Vista previa</div>
+      <div id="previewReporteResumen"></div>
+      <div id="previewReporteContenido"></div>
+    </div>
+  </div>
+</div>
+
+<section id="reportes">
+<h2>Reportes</h2><div id="reportesBox" class="card"></div>
+</section>
+</div>
+
+<nav>
+<button class="navbtn active" onclick="show('inicio')">🏠<br>Inicio</button>
+<button class="navbtn" onclick="show('clientes')">👥<br>Clientes</button>
+<button class="navbtn" onclick="show('cobros')">💵<br>Cobros</button>
+<button class="navbtn" onclick="show('creditosHoy')">📅<br>Hoy</button>
+<button class="navbtn" onclick="show('historial')">📋<br>Historial</button>
+</nav>
+
+<script>
+const KEY='misCobrosV1_20261001';
+const REVISADOS_KEY='misCobrosRevisadosV1';
+let cobrosRevisados=JSON.parse(localStorage.getItem(REVISADOS_KEY)||'{}');
+function revisadoHoy(clienteId){ const hoy=dateStr(new Date()); return !!(cobrosRevisados[hoy]&&cobrosRevisados[hoy][clienteId]); }
+// Oculta al cliente del listado de cobros de hoy tras cualquier pago positivo. La deuda y las cuotas no se modifican.
+function marcarCobroAtendido(clienteId){ const hoy=dateStr(new Date()); if(!cobrosRevisados[hoy])cobrosRevisados[hoy]={}; cobrosRevisados[hoy][clienteId]=true; localStorage.setItem(REVISADOS_KEY,JSON.stringify(cobrosRevisados)); }
+function limpiarRevisadosAntiguos(){ const hoy=dateStr(new Date()); Object.keys(cobrosRevisados).forEach(f=>{if(f!==hoy)delete cobrosRevisados[f];}); localStorage.setItem(REVISADOS_KEY,JSON.stringify(cobrosRevisados)); }
+function mensajeNoPago(c){
+  const fecha=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric',timeZone:'America/Lima'});
+  return `Hola ${c.nombre}, te informamos que el día de hoy (${fecha}) no se recibió el pago correspondiente. Si ya realizaste tu pago, por favor ignora este mensaje. Gracias.`;
+}
+function notificarNoPago(c){
+  abrirWhatsApp(c,mensajeNoPago(c));
+}
+function marcarCobroRevisado(clienteId){
+  const hoy=dateStr(new Date());
+  if(!cobrosRevisados[hoy])cobrosRevisados[hoy]={};
+  cobrosRevisados[hoy][clienteId]=true;
+  localStorage.setItem(REVISADOS_KEY,JSON.stringify(cobrosRevisados));
+  const c=cliente(clienteId);
+  render();
+  if(confirm('¿Quieres enviar una notificación porque hoy no se recibió el pago?')){
+    notificarNoPago(c);
+  }
+}
+function quitarCobroRevisado(clienteId){
+  const hoy=dateStr(new Date());
+  if(cobrosRevisados[hoy]){ delete cobrosRevisados[hoy][clienteId]; if(!Object.keys(cobrosRevisados[hoy]).length)delete cobrosRevisados[hoy]; }
+  localStorage.setItem(REVISADOS_KEY,JSON.stringify(cobrosRevisados));
+  render();
+}
+limpiarRevisadosAntiguos();
+let reporteConfig={tipo:'hoy',desde:dateStr(new Date()),hasta:dateStr(new Date())};
+let db=JSON.parse(localStorage.getItem(KEY)||'{"capital":0,"clientes":[],"prestamos":[],"pagos":[],"movimientosCapital":[]}');
+if(!Array.isArray(db.movimientosCapital))db.movimientosCapital=[];
+// Identificador único para poder editar o eliminar abonos individualmente.
+db.pagos.forEach((p,i)=>{if(!p.id)p.id=Date.now()+i;});
+
+function hacerBackup(){
+  const respaldo={app:'Mi Agenda',version:1,fecha:new Date().toLocaleString('es-PE',{timeZone:'America/Lima'}),datos:db};
+  const blob=new Blob([JSON.stringify(respaldo,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  const f=dateStr(new Date()); a.href=url; a.download='mi_agenda_backup_'+f+'.json';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+  document.getElementById('backupInfo').textContent='Backup creado: '+new Date().toLocaleString();
+}
+function recuperarBackup(ev){
+  const file=ev.target.files&&ev.target.files[0]; if(!file)return;
+  const reader=new FileReader(); reader.onload=function(){
+    try{
+      const r=JSON.parse(reader.result); const d=r&&r.datos;
+      if(!d||!Array.isArray(d.clientes)||!Array.isArray(d.prestamos)||!Array.isArray(d.pagos)) throw new Error('formato');
+      if(!confirm('Esto reemplazará los datos actuales por los del backup. ¿Deseas continuar?')){ev.target.value='';return;}
+      db={capital:Number(d.capital||0),clientes:d.clientes,prestamos:d.prestamos,pagos:d.pagos,movimientosCapital:Array.isArray(d.movimientosCapital)?d.movimientosCapital:[]};
+      save(); alert('Datos recuperados correctamente.'); ev.target.value='';
+    }catch(e){alert('No se pudo recuperar el backup. El archivo no tiene un formato válido de Mi Agenda.'); ev.target.value='';}
+  }; reader.readAsText(file);
+}
+
+function save(){localStorage.setItem(KEY,JSON.stringify(db));render()}
+function money(n){return 'S/ '+Math.round(Number(n||0))}
+function ingresarCapital(){
+ let val=prompt('Ingresar capital\n\nMonto a ingresar:', '');
+ if(val===null)return; val=Math.round(+val);if(!(val>0))return alert('Ingresa un monto válido.');
+ let concepto=prompt('Concepto o procedencia (opcional):','Ingreso de capital');
+ db.capital=+(db.capital+val);
+ db.movimientosCapital.push({id:Date.now(),fecha:dateStr(new Date()),tipo:'ingreso',monto:+val,concepto:(concepto||'Ingreso de capital').trim()});
+ save();
+ alert('Capital ingresado correctamente: '+money(val)+'\nCapital disponible: '+money(db.capital));
+}
+function retirarCapital(){
+ if(db.capital<=0)return alert('No tienes capital disponible para retirar.');
+ let val=prompt('Retiro de capital / gasto\n\nCapital disponible: '+money(db.capital)+'\nMonto a retirar:', '');
+ if(val===null)return; val=Math.round(+val);if(!(val>0))return alert('Ingresa un monto válido.');
+ if(val>db.capital+0.005)return alert('El retiro no puede superar el capital disponible de '+money(db.capital)+'.');
+ let concepto=prompt('Concepto del retiro o gasto (opcional):','Retiro / gasto');
+ db.capital=+(db.capital-val);
+ db.movimientosCapital.push({id:Date.now(),fecha:dateStr(new Date()),tipo:'retiro',monto:+val,concepto:(concepto||'Retiro / gasto').trim()});
+ save();
+ alert('Retiro registrado: '+money(val)+'\nCapital disponible: '+money(db.capital));
+}
+function dateStr(d){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'}).format(d)}
+function addDays(d,n){let x=new Date(d);x.setDate(x.getDate()+n);return x}
+function nextCobro(d){let x=new Date(d);x.setDate(x.getDate()+1);while(x.getDay()==0)x.setDate(x.getDate()+1);return x}
+function show(id,opts={}){
+ const sec=document.getElementById(id); if(!sec)return;
+ const key=opts.key||appPendingNavKey||id;
+ appPendingNavKey=null;
+ if(!opts.fromPop && !appRestoringHistory && key!==appCurrentNavKey){
+   history.pushState(appNavState(id,key),'',location.href);
+ }
+ appCurrentNavKey=key;
+ if(opts.fromPop && history.state?.miAgenda) appCurrentNavKey=history.state.key||key;
+ document.querySelectorAll('section').forEach(s=>s.classList.remove('active-section'));
+ sec.classList.add('active-section');
+ document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+ const navMap={inicio:0,clientes:1,cobros:2,creditosHoy:3,historial:4};
+ if(navMap[id]!==undefined){const nb=document.querySelectorAll('.navbtn')[navMap[id]];if(nb)nb.classList.add('active');}
+ if(id!=='inicio' && !sec.querySelector('.back-home')){
+  const back=document.createElement('button'); back.className='btn back-home'; back.type='button';
+  back.textContent='← Inicio'; back.onclick=()=>show('inicio');
+  back.style.cssText='margin:0 0 10px 0;padding:9px 12px;box-shadow:none;background:#fff;color:#1456d8;border:1px solid #dbe5f5';
+  sec.insertBefore(back,sec.firstChild);
+ }
+ render();
+ if(id==='nuevo'){fillClientes();prepararFechasCredito();actualizarVistaPreviaCronograma();}
+}
+let nuevoClienteId=null;
+function crearCliente(e){
+ e.preventDefault();
+ const btn=e.submitter;
+ if(btn){btn.disabled=true;btn.dataset.originalText=btn.textContent;btn.textContent='Guardando...';}
+ const nombre=cnombre.value.trim(), dni=cdni.value.trim(), tel=ctel.value.trim(), dir=cdir.value.trim(), distrito=cdistrito.value.trim();
+ // Evita duplicados por doble toque o por volver a guardar el mismo DNI.
+ const duplicado=db.clientes.find(c=>String(c.dni||'').trim()===dni && dni!=='');
+ if(duplicado){
+   alert('Ya existe un cliente registrado con este DNI / identificación.');
+   if(btn){btn.disabled=false;btn.textContent=btn.dataset.originalText||'Guardar cliente';}
+   return;
+ }
+ nuevoClienteId=Date.now();
+ db.clientes.push({id:nuevoClienteId,nombre,dni,tel,dir,distrito});
+ save();
+ // Limpiar el formulario y cerrar visualmente la pantalla de alta.
+ e.target.reset();
+ document.getElementById('creditoModalTexto').textContent=`${nombre} fue creado correctamente. ¿Quieres crearle un crédito ahora?`;
+ document.getElementById('creditoModal').style.display='flex';
+ if(btn){btn.disabled=false;btn.textContent=btn.dataset.originalText||'Guardar cliente';}
+}
+function cerrarCreditoModal(){
+ document.getElementById('creditoModal').style.display='none';
+ show('clientes');
+}
+function crearCreditoNuevoCliente(){
+ document.getElementById('creditoModal').style.display='none';
+ show('nuevo');
+ fillClientes();
+ const sel=document.getElementById('pcliente');
+ if(sel && nuevoClienteId!==null) sel.value=String(nuevoClienteId);
+}
+function fillClientes(){
+ const sel=document.getElementById('pcliente');
+ if(!sel)return;
+ sel.innerHTML=db.clientes.length?db.clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join(''):'<option value="">Primero crea un cliente</option>';
+}
+function fechaCreacionInput(){return document.getElementById('fechaCreacion')?.value||''}
+function fechaPrimerPagoInput(){return document.getElementById('fechaPrimerPago')?.value||''}
+function prepararFechasCredito(){
+ const hoy=dateStr(new Date());
+ const fc=document.getElementById('fechaCreacion'), fp=document.getElementById('fechaPrimerPago');
+ if(!fc||!fp)return;
+ if(!fc.value)fc.value=hoy;
+ if(!fp.value){let d=new Date();d.setDate(d.getDate()+1);while(d.getDay()===0)d.setDate(d.getDate()+1);fp.value=dateStr(d);}
+ fc.onchange=()=>{
+   if(!fc.value)return;
+   if(!fp.value||fp.value<fc.value){let d=new Date(fc.value+'T00:00:00');d.setDate(d.getDate()+1);while(d.getDay()===0)d.setDate(d.getDate()+1);fp.value=dateStr(d);}
+   fp.min=fc.value;
+   actualizarVistaPreviaCronograma();
+ };
+ fp.onchange=actualizarVistaPreviaCronograma;
+ ['monto','interes','modalidad'].forEach(id=>{const el=document.getElementById(id);if(el){el.oninput=actualizarVistaPreviaCronograma;el.onchange=actualizarVistaPreviaCronograma;}});
+ fp.min=fc.value;
+}
+function actualizarVistaPreviaCronograma(){
+ const box=document.getElementById('vistaPreviaCronograma'); if(!box)return;
+ const fecha=fechaPrimerPagoInput(), n=+document.getElementById('modalidad')?.value||24;
+ const semanal=n<=4 && document.getElementById('modalidad')?.value!=='24' && document.getElementById('modalidad')?.value!=='30';
+ const capital=Math.round(+document.getElementById('monto')?.value||0), pct=+document.getElementById('interes')?.value||0;
+ if(!fecha||!capital||!n){box.innerHTML='<b>👁️ Vista previa del cronograma</b><p class="small">Completa monto y fechas para ver el cronograma.</p>';return;}
+ let total=Math.round(capital*(1+pct/100)), cuota=Math.floor(total/n), d=new Date(fecha+'T00:00:00'), rows='';
+ for(let i=0;i<n;i++){while(d.getDay()===0)d.setDate(d.getDate()+1);let m=i===n-1?total-cuota*(n-1):cuota;rows+=`<tr><td>${i+1}</td><td>${fmtFecha(dateStr(d))}</td><td class="num">${money(m)}</td></tr>`;d=semanal?addDays(d,7):nextCobro(d);}
+ box.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>👁️ Vista previa del cronograma</b><span class="small">${n} cuotas</span></div><p class="small" style="margin:6px 0">Total del crédito: <b>${money(total)}</b> · Primer pago: <b>${fmtFecha(fecha)}</b></p><div style="max-height:220px;overflow:auto"><table><thead><tr><th>#</th><th>Fecha</th><th class="num">Cuota</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function crearPrestamo(e){
+ e.preventDefault();
+ try{
+  if(!Array.isArray(db.clientes)||!db.clientes.length)return alert('Primero crea un cliente.');
+  if(!Array.isArray(db.prestamos))db.prestamos=[];
+  const elCliente=document.getElementById('pcliente');
+  const elMonto=document.getElementById('monto');
+  const elInteres=document.getElementById('interes');
+  const elModalidad=document.getElementById('modalidad');
+  if(!elCliente||!elMonto||!elInteres||!elModalidad)return alert('No se pudo abrir correctamente el formulario de crédito. Recarga la página e inténtalo nuevamente.');
+  let capital=Math.round(+elMonto.value), pct=+elInteres.value, n=+elModalidad.value, semanal=n<=4 && elModalidad.value!=='24' && elModalidad.value!=='30';
+  let fechaCreacion=fechaCreacionInput();
+  let fechaPrimerPago=fechaPrimerPagoInput();
+  if(!fechaCreacion||!fechaPrimerPago)return alert('Selecciona la fecha de creación y la fecha del primer pago.');
+  let dc=new Date(fechaCreacion+'T00:00:00'), dp=new Date(fechaPrimerPago+'T00:00:00');
+  if(isNaN(dc.getTime())||isNaN(dp.getTime()))return alert('Las fechas seleccionadas no son válidas.');
+  if(dp<dc)return alert('La fecha del primer pago no puede ser anterior a la fecha de creación.');
+  if(dp.getDay()===0)return alert('El primer pago debe ser de lunes a sábado. El domingo no se realizan cobros.');
+  if(!(capital>0))return alert('Ingresa un monto de préstamo válido.');
+  if(capital>Math.round(Number(db.capital||0))){
+    return alert('No puedes realizar este préstamo.\n\nCapital disponible: '+money(db.capital)+'\nMonto solicitado: '+money(capital)+'\n\nDebes inyectar capital antes de prestar este monto.');
+  }
+  const clienteId=Number(elCliente.value);
+  if(!clienteId || !db.clientes.some(c=>Number(c.id)===clienteId))return alert('Selecciona un cliente válido.');
+  let total=Math.round(capital*(1+pct/100)), cuota=Math.floor(total/n);
+  let p={id:Date.now(),clienteId,capital,pct,total,n,semanal,cuota,inicio:fechaCreacion,pagadas:0,pendiente:total,cuotas:[]};
+  let d=new Date(dp.getTime());
+  for(let i=0;i<n;i++){
+    while(d.getDay()===0)d.setDate(d.getDate()+1);
+    let montoCuota=(i===n-1)?(total-cuota*(n-1)):cuota;
+    p.cuotas.push({i:i+1,fecha:dateStr(d),monto:montoCuota,pagado:0,estado:'pendiente'});
+    d=semanal?addDays(d,7):nextCobro(d);
+  }
+  db.prestamos.push(p);
+  db.capital=Number(db.capital||0)-capital;
+  save();
+  show('inicio');
+ }catch(err){
+  console.error('Error al crear crédito:',err);
+  alert('No se pudo crear el crédito.\n\nDetalle: '+(err?.message||err));
+ }
+}
+function cliente(id){return db.clientes.find(c=>c.id===id)||{nombre:'Cliente eliminado'}}
+function registrarPagoCredito(pid,i){
+ let p=db.prestamos.find(x=>x.id===pid), q=p?.cuotas[i]; if(!p||!q)return;
+ let c=cliente(p.clienteId);
+ let pendienteCredito=p.cuotas.reduce((s,x)=>s+Math.max(0,x.monto-x.pagado),0);
+ let val=prompt(`Pago recibido de ${c.nombre}.\nCuota ${q.i}: ${money(Math.max(0,q.monto-q.pagado))}\nSaldo de ESTE crédito: ${money(pendienteCredito)}\n\nPuedes registrar el monto REAL que entregó el cliente. Si paga más, el excedente se aplicará automáticamente a las siguientes cuotas de este crédito.`, '');
+ if(val===null)return;
+ val=Math.round(+val); if(!(val>0))return;
+ let recibido=Math.min(val,pendienteCredito), restante=recibido, aplicado=0;
+ for(let j=i;j<p.cuotas.length && restante>0.005;j++){
+   let cuota=p.cuotas[j], falta=Math.max(0,cuota.monto-cuota.pagado);
+   if(falta<=0.005)continue;
+   let usar=Math.min(restante,falta);
+   cuota.pagado=+(cuota.pagado+usar);
+   cuota.estado=cuota.pagado>=cuota.monto-0.005?'pagado':'parcial';
+   restante=+(restante-usar); aplicado=+(aplicado+usar);
+ }
+ p.pendiente=+(p.cuotas.reduce((s,x)=>s+Math.max(0,x.monto-x.pagado),0));
+ p.pagadas=p.cuotas.filter(x=>x.pagado>=x.monto-0.005).length;
+ db.capital+=aplicado;
+ db.pagos.push({id:Date.now(),fecha:dateStr(new Date()),clienteId:p.clienteId,monto:aplicado,recibido:+val,pid:p.id,cuotaInicial:q.i});
+ marcarCobroAtendido(p.clienteId);
+ save();
+ let fechaPago=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
+ let mensaje=`Hola ${c.nombre}, recibimos tu pago de ${money(aplicado)} con fecha ${fechaPago}. El saldo pendiente de este crédito es de ${money(p.pendiente)}. Gracias.`;
+ document.getElementById('pagoResultadoTexto').innerHTML=`<p><b>Cliente:</b> ${c.nombre}</p><p><b>Crédito:</b> ${p.semanal?'Semanal':'Diario'} · ${p.n} ${p.semanal?'semana(s)':'días'}</p><p><b>Pago recibido:</b> ${money(aplicado)}</p><p><b>Saldo de este crédito:</b> <strong>${money(p.pendiente)}</strong></p><p class="small">Fecha: ${fechaPago}</p>`;
+ document.getElementById('btnEnviarSaldo').onclick=()=>abrirWhatsApp(c,mensaje);
+ document.getElementById('pagoResultado').style.display='flex';
+ creditoActualId=p.id; verCuotas(p.id);
+}
+function cobrar(pid,i){ registrarPagoCredito(pid,i); }
+function abrirReporteCobradoHoy(){
+  reporteConfig={tipo:'hoy',modo:'general',desde:dateStr(new Date()),hasta:dateStr(new Date())};
+  show('reporteDetalle');
+  renderReporte();
+}
+function seleccionarTipoReporte(modo){
+  reporteConfig.modo=modo;
+  document.querySelectorAll('.report-toolbar .btn').forEach(b=>{
+    if(['📊 General','➖ Gastos','💸 Préstamos'].includes(b.textContent.trim())) b.classList.remove('primary');
+  });
+  let labels={general:'📊 General',gastos:'➖ Gastos',prestamos:'💸 Préstamos'};
+  [...document.querySelectorAll('.report-toolbar .btn')].find(b=>b.textContent.trim()===labels[modo])?.classList.add('primary');
+  renderReporte();
+}
+function seleccionarReporte(tipo){
+  let hoy=dateStr(new Date());
+  reporteConfig.tipo=tipo;
+  if(!reporteConfig.modo)reporteConfig.modo='general';
+  if(tipo==='hoy'){reporteConfig.desde=hoy;reporteConfig.hasta=hoy;}
+  else if(tipo==='fecha'){reporteConfig.desde=document.getElementById('reporteFecha')?.value||hoy;reporteConfig.hasta=reporteConfig.desde;}
+  else if(tipo==='semana'){
+    let d=new Date(hoy+'T12:00:00'), day=d.getDay()||7;
+    d.setDate(d.getDate()-day+1); reporteConfig.desde=dateStr(d); reporteConfig.hasta=hoy;
+  } else if(tipo==='mes'){
+    reporteConfig.desde=hoy.slice(0,8)+'01'; reporteConfig.hasta=hoy;
+  } else if(tipo==='personalizado'){
+    reporteConfig.desde=document.getElementById('reporteDesde')?.value||hoy;
+    reporteConfig.hasta=document.getElementById('reporteHasta')?.value||hoy;
+  }
+  let fu=document.getElementById('reporteFechaUnica'), fp=document.getElementById('reporteFechasPersonalizadas');
+  if(fu)fu.style.display=tipo==='fecha'?'block':'none';
+  if(fp)fp.style.display=tipo==='personalizado'?'grid':'none';
+  if(tipo==='fecha' && document.getElementById('reporteFecha'))document.getElementById('reporteFecha').value=reporteConfig.desde;
+  if(tipo==='personalizado'){
+    if(document.getElementById('reporteDesde'))document.getElementById('reporteDesde').value=reporteConfig.desde;
+    if(document.getElementById('reporteHasta'))document.getElementById('reporteHasta').value=reporteConfig.hasta;
+  }
+  document.querySelectorAll('.report-toolbar .btn').forEach(b=>b.classList.remove('primary'));
+  let labels={hoy:'Hoy',fecha:'Otra fecha',semana:'Esta semana',mes:'Este mes',personalizado:'Personalizado'};
+  [...document.querySelectorAll('.report-toolbar .btn')].find(b=>b.textContent===labels[tipo])?.classList.add('primary');
+  renderReporte();
+}
+function actualizarReporteDesdeControles(){
+  if(reporteConfig.tipo==='fecha'){
+    let v=document.getElementById('reporteFecha')?.value||dateStr(new Date()); reporteConfig.desde=v; reporteConfig.hasta=v;
+  }else if(reporteConfig.tipo==='personalizado'){
+    reporteConfig.desde=document.getElementById('reporteDesde')?.value||dateStr(new Date());
+    reporteConfig.hasta=document.getElementById('reporteHasta')?.value||reporteConfig.desde;
+  }
+  renderReporte();
+}
+function fmtFecha(v){if(!v)return '—'; let [y,m,d]=v.split('-'); return `${d}/${m}/${y}`;}
+function nombreDoc(){let n=+(localStorage.getItem('misCobrosDocNo')||0)+1;localStorage.setItem('misCobrosDocNo',n);return String(n).padStart(5,'0');}
+function calcReporte(desde,hasta){
+  let enRango=x=>x.fecha>=desde&&x.fecha<=hasta;
+  let pagos=db.pagos.filter(enRango);
+  let prestamos=db.prestamos.filter(p=>p.inicio>=desde&&p.inicio<=hasta);
+  let mov=db.movimientosCapital.filter(enRango);
+  let cobrado=pagos.reduce((s,x)=>s+Number(x.monto||0),0);
+  let recibido=pagos.reduce((s,x)=>s+Number(x.recibido??x.monto??0),0);
+  let prestado=prestamos.reduce((s,p)=>s+Number(p.capital||0),0);
+  let ganancia=pagos.reduce((s,x)=>{
+    let p=db.prestamos.find(z=>z.id===x.pid); let pct=Number(p?.pct||0); return s+Number(x.monto||0)*(pct/(100+pct));
+  },0);
+  let gastos=mov.filter(x=>x.tipo==='retiro').reduce((s,x)=>s+Number(x.monto||0),0);
+  let ingresos=mov.filter(x=>x.tipo==='ingreso').reduce((s,x)=>s+Number(x.monto||0),0);
+  let dias=Math.max(1,Math.round((new Date(hasta+'T12:00:00')-new Date(desde+'T12:00:00'))/86400000)+1);
+  return {pagos,prestamos,mov,cobrado,recibido,prestado,ganancia,gastos,ingresos,dias};
+}
+function renderReporte(){
+  let desde=reporteConfig.desde||dateStr(new Date()), hasta=reporteConfig.hasta||desde;
+  if(desde>hasta){let t=desde;desde=hasta;hasta=t;reporteConfig.desde=desde;reporteConfig.hasta=hasta;}
+  let r=calcReporte(desde,hasta), single=desde===hasta, modo=reporteConfig.modo||'general';
+  let baseTitulo=reporteConfig.tipo==='semana'?'REPORTE SEMANAL':reporteConfig.tipo==='mes'?'REPORTE MENSUAL':single?'REPORTE DIARIO':'REPORTE GENERAL';
+  let titulo=modo==='gastos'?'REPORTE DE GASTOS':modo==='prestamos'?'REPORTE DE PRÉSTAMOS':baseTitulo;
+  document.getElementById('reporteTitulo').textContent=titulo;
+  document.getElementById('reportePeriodo').textContent=single?fmtFecha(desde):`${fmtFecha(desde)} al ${fmtFecha(hasta)}`;
+  if(!document.getElementById('reporteDocNo').dataset.ready) {document.getElementById('reporteDocNo').textContent=nombreDoc();document.getElementById('reporteDocNo').dataset.ready='1';}
+  if(modo==='gastos'){
+    let gastos=r.mov.filter(x=>x.tipo==='retiro');
+    let total=gastos.reduce((s,x)=>s+Number(x.monto||0),0);
+    let rows=gastos.map(x=>`<tr><td>${fmtFecha(x.fecha)}</td><td>${x.concepto||'Retiro / gasto'}</td><td class="num"><b style="color:#c52b44">${money(x.monto)}</b></td></tr>`).join('');
+    document.getElementById('reporteResumen').innerHTML=`<div class="report-stat" style="grid-template-columns:repeat(2,1fr)"><div><b style="color:#c52b44">${money(total)}</b><span>Total gastos</span></div><div><b>${gastos.length}</b><span>Movimientos</span></div></div>`;
+    document.getElementById('reporteContenido').innerHTML=`
+      <div class="report-card"><div style="padding:10px 12px;background:#c52b44;color:#fff;font-weight:800">Gastos registrados (${gastos.length})</div>
+      <table class="report-table"><thead><tr><th>Fecha</th><th>Concepto</th><th class="num">Monto</th></tr></thead><tbody>${rows||'<tr><td colspan="3">No hubo gastos en este periodo.</td></tr>'}</tbody>
+      <tfoot><tr class="report-total"><td colspan="2" style="text-align:right">Total gastos:</td><td class="num">${money(total)}</td></tr></tfoot></table></div>
+      <div class="report-note">Este reporte incluye únicamente retiros y gastos registrados desde la opción “Retiro / gasto”.</div>`;
+    return;
+  }
+  if(modo==='prestamos'){
+    let total=r.prestamos.reduce((s,p)=>s+Number(p.capital||0),0);
+    let interes=r.prestamos.reduce((s,p)=>s+Math.max(0,Number(p.total||0)-Number(p.capital||0)),0);
+    let pendiente=r.prestamos.reduce((s,p)=>s+Number(p.pendiente||0),0);
+    let rows=r.prestamos.map(p=>`<tr><td>${cliente(p.clienteId).nombre}</td><td>${fmtFecha(p.inicio)}</td><td class="num"><b style="color:#176ee8">${money(p.capital)}</b></td><td class="num">${Number(p.pct||0)}%</td><td class="num">${money(p.total)}</td><td class="num">${money(p.pendiente)}</td></tr>`).join('');
+    document.getElementById('reporteResumen').innerHTML=`<div class="report-stat"><div><b style="color:#176ee8">${money(total)}</b><span>Capital prestado</span></div><div><b style="color:#078453">${money(interes)}</b><span>Interés generado</span></div><div><b>${r.prestamos.length}</b><span>Préstamos</span></div><div><b style="color:#c52b44">${money(pendiente)}</b><span>Saldo pendiente</span></div><div><b>${r.dias}</b><span>Días</span></div></div>`;
+    document.getElementById('reporteContenido').innerHTML=`
+      <div class="report-card"><div style="padding:10px 12px;background:#176ee8;color:#fff;font-weight:800">Préstamos registrados (${r.prestamos.length})</div>
+      <table class="report-table"><thead><tr><th>Cliente</th><th>Fecha</th><th class="num">Capital</th><th class="num">Interés</th><th class="num">Total</th><th class="num">Pendiente</th></tr></thead><tbody>${rows||'<tr><td colspan="6">No hubo préstamos en este periodo.</td></tr>'}</tbody>
+      <tfoot><tr class="report-blue"><td colspan="2" style="text-align:right">Totales:</td><td class="num">${money(total)}</td><td class="num">${money(interes)}</td><td class="num">${money(total+interes)}</td><td class="num">${money(pendiente)}</td></tr></tfoot></table></div>
+      <div class="report-note">Este reporte incluye los créditos cuya fecha de inicio está dentro del periodo seleccionado.</div>`;
+    return;
+  }
+  document.getElementById('reporteResumen').innerHTML=`
+  <div class="report-stat">
+    <div><b style="color:#078453">${money(r.cobrado)}</b><span>Total cobrado</span></div>
+    <div><b style="color:#176ee8">${money(r.prestado)}</b><span>Capital prestado</span></div>
+    <div><b style="color:#078453">${money(r.ganancia)}</b><span>Ganancia</span></div>
+    <div><b style="color:#c52b44">${money(r.gastos)}</b><span>Gastos</span></div>
+    <div><b>${r.dias}</b><span>Días</span></div>
+  </div>
+  <div class="card" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><b>➕ Ingresos manuales de capital:</b> ${money(r.ingresos)}</div><div><b>💵 Cobrado recibido:</b> ${money(r.recibido)}</div></div>`;
+  let cobrosRows=r.pagos.map(x=>{
+    let c=cliente(x.clienteId), p=db.prestamos.find(z=>z.id===x.pid), pct=Number(p?.pct||0), g=Number(x.monto||0)*pct/(100+pct);
+    let saldoDesp=p?Number(p.pendiente||0):0, saldoAntes=saldoDesp+Number(x.monto||0);
+    return `<tr><td>${c.nombre}</td><td>${fmtFecha(x.fecha)}</td><td class="num">${money(saldoAntes)}</td><td class="num"><b style="color:#078453">${money(x.monto)}</b></td><td class="num">${money(saldoDesp)}</td></tr>`;
+  }).join('');
+  let prestRows=r.prestamos.map(p=>`<tr><td>${cliente(p.clienteId).nombre}</td><td>—</td><td>${fmtFecha(p.inicio)}</td><td class="num"><b style="color:#176ee8">${money(p.capital)}</b></td><td class="num">${money(p.total)}</td></tr>`).join('');
+  let gainRows=r.pagos.map(x=>{let p=db.prestamos.find(z=>z.id===x.pid),pct=Number(p?.pct||0),g=Number(x.monto||0)*pct/(100+pct),cap=Number(x.monto||0)-g;return `<tr><td>${cliente(x.clienteId).nombre}</td><td>${fmtFecha(x.fecha)}</td><td class="num">${money(x.monto)}</td><td class="num"><b style="color:#078453">${money(g)}</b></td><td class="num" style="color:#176ee8">${money(cap)}</td></tr>`;}).join('');
+  let movRows=r.mov.map(x=>`<tr><td>${x.tipo==='ingreso'?'Ingreso de capital':'Gasto / retiro'}</td><td>${fmtFecha(x.fecha)}</td><td>${x.concepto||'—'}</td><td class="num" style="color:${x.tipo==='ingreso'?'#078453':'#c52b44'}">${x.tipo==='ingreso'?'+':'−'} ${money(x.monto)}</td></tr>`).join('');
+  document.getElementById('reporteContenido').innerHTML=`
+  <div class="report-card"><div style="padding:10px 12px;background:#08a86c;color:#fff;font-weight:800">Cobros recibidos (${r.pagos.length})</div><table class="report-table"><thead><tr><th>Cliente</th><th>Fecha</th><th class="num">Debía</th><th class="num">Cuota / cobro</th><th class="num">Resta</th></tr></thead><tbody>${cobrosRows||'<tr><td colspan="5">No hubo cobros en este periodo.</td></tr>'}</tbody><tfoot><tr class="report-total"><td colspan="4" style="text-align:right">Total cobrado:</td><td class="num">${money(r.cobrado)}</td></tr></tfoot></table></div>
+  <div class="report-card"><div style="padding:10px 12px;background:#176ee8;color:#fff;font-weight:800">Capital prestado (${r.prestamos.length})</div><table class="report-table"><thead><tr><th>Cliente</th><th>Mercancía</th><th>Fecha</th><th class="num">Prestado</th><th class="num">Total</th></tr></thead><tbody>${prestRows||'<tr><td colspan="5">No hubo nuevos préstamos en este periodo.</td></tr>'}</tbody><tfoot><tr class="report-blue"><td colspan="4" style="text-align:right">Total prestado:</td><td class="num">${money(r.prestado)}</td></tr></tfoot></table></div>
+  <div class="report-card"><div style="padding:10px 12px;background:#078f82;color:#fff;font-weight:800">Ganancias (${r.pagos.length} cobros)</div><table class="report-table"><thead><tr><th>Cliente</th><th>Fecha</th><th class="num">Cobro</th><th class="num">Ganancia</th><th class="num">Capital rec.</th></tr></thead><tbody>${gainRows||'<tr><td colspan="5">No hubo ganancias por cobros en este periodo.</td></tr>'}</tbody><tfoot><tr class="report-total"><td colspan="3" style="text-align:right">Ganancia:</td><td class="num">${money(r.ganancia)}</td><td class="num">Capital rec.: ${money(r.cobrado-r.ganancia)}</td></tr></tfoot></table></div>
+  <div class="report-card"><div style="padding:10px 12px;background:#c52b44;color:#fff;font-weight:800">Gastos e ingresos manuales (${r.mov.length})</div><table class="report-table"><thead><tr><th>Movimiento</th><th>Fecha</th><th>Concepto</th><th class="num">Monto</th></tr></thead><tbody>${movRows||'<tr><td colspan="4">No hubo movimientos de capital en este periodo.</td></tr>'}</tbody><tfoot><tr><td colspan="3" style="text-align:right"><b>Ingresos manuales:</b> ${money(r.ingresos)} &nbsp; <b>Gastos:</b> ${money(r.gastos)}</td><td class="num"><b>Neto: ${money(r.ingresos-r.gastos)}</b></td></tr></tfoot></table></div>
+  <div class="report-note">Generado: ${new Date().toLocaleString('es-PE')} · El capital recuperado por cobros se calcula según el porcentaje de interés de cada crédito.</div>`;
+}
+function abrirVistaPreviaReporte(){
+  renderReporte();
+  document.getElementById('previewReporteResumen').innerHTML=document.getElementById('reporteResumen').innerHTML;
+  document.getElementById('previewReporteContenido').innerHTML=document.getElementById('reporteContenido').innerHTML;
+  document.getElementById('reportePreviewModal').style.display='block';
+  document.body.style.overflow='hidden';
+}
+function cerrarVistaPrevia(){
+  document.getElementById('reportePreviewModal').style.display='none';
+  document.body.style.overflow='';
+}
+function imprimirReporteDesdeVistaPrevia(){
+  cerrarVistaPrevia();
+  renderReporte();
+  document.body.classList.add('printing');
+  setTimeout(()=>{window.print();setTimeout(()=>document.body.classList.remove('printing'),800);},120);
+}
+function generarPDFReporte(){
+  abrirVistaPreviaReporte();
+}
+function notificacionJornada(){
+ try{
+  const hoy=dateStr(new Date()), clave='miAgendaJornada_'+hoy;
+  if(localStorage.getItem(clave)==='1') return;
+  const diarios=new Set(), semanales=new Set();
+  db.prestamos.forEach(p=>{
+   if(!(p.pendiente>0.005)) return;
+   const tieneHoy=p.cuotas && p.cuotas.some(q=>q.fecha===hoy && q.pagado<q.monto-0.005);
+   if(!tieneHoy) return;
+   if(p.semanal) semanales.add(p.clienteId); else diarios.add(p.clienteId);
+  });
+  const total=diarios.size+semanales.size;
+  if(!total) return;
+  const mensaje=`Hoy tienes ${total} cliente${total===1?'':'s'} pautado${total===1?'':'s'} para cobrar: ${diarios.size} diario${diarios.size===1?'':'s'} y ${semanales.size} semanal${semanales.size===1?'':'es'}.`;
+  if('Notification' in window){
+   if(Notification.permission==='granted') new Notification('Mi Agenda — Jornada de hoy',{body:mensaje});
+   else if(Notification.permission!=='denied') Notification.requestPermission().then(x=>{if(x==='granted') new Notification('Mi Agenda — Jornada de hoy',{body:mensaje});});
+  }
+  localStorage.setItem(clave,'1');
+ }catch(e){}
+}
+
+function renderCreditosHoy(){
+ const box=document.getElementById('creditosHoyLista'), resumen=document.getElementById('creditosHoyResumen');
+ if(!box||!resumen)return;
+ const hoy=dateStr(new Date());
+ const lista=db.prestamos.filter(p=>String(p.inicio||'')===hoy).sort((a,b)=>(b.id||0)-(a.id||0));
+ const capital=lista.reduce((s,p)=>s+Number(p.capital||0),0);
+ const total=lista.reduce((s,p)=>s+Number(p.total||0),0);
+ const pendiente=lista.reduce((s,p)=>s+Number(p.pendiente||0),0);
+ resumen.innerHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+   <div><div class="small">Créditos creados</div><b style="font-size:22px">${lista.length}</b></div>
+   <div><div class="small">Capital prestado</div><b style="font-size:18px">${money(capital)}</b></div>
+   <div><div class="small">Saldo pendiente</div><b style="font-size:18px;color:#1456d8">${money(pendiente)}</b></div>
+ </div>
+ <div class="small" style="margin-top:8px">${fmtFecha(hoy)} · Total generado en créditos: <b>${money(total)}</b></div>`;
+ if(!lista.length){
+   box.innerHTML='<div class="row" style="display:block;text-align:center;padding:24px 16px"><div style="font-size:30px">📭</div><b>No hay créditos creados hoy.</b><div class="small" style="margin-top:5px">Aquí aparecerán automáticamente los préstamos que registres durante el día.</div></div>';
+   return;
+ }
+ box.innerHTML=lista.map(p=>{
+   const c=cliente(p.clienteId);
+   const estado=p.pendiente<=0.005?'Terminado':'Activo';
+   const clase=p.pendiente<=0.005?'paid':'pending';
+   return `<div class="row" style="display:block">
+     <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+       <div><b>${c.nombre}</b><div class="small">Préstamo ${money(p.capital)} · ${Number(p.pct||0)}% · ${p.semanal?'Semanal':'Diario'}</div></div>
+       <span class="badge ${clase}">${estado}</span>
+     </div>
+     <div class="small" style="margin-top:5px">Total: <b>${money(p.total)}</b> · Pendiente: <b>${money(p.pendiente)}</b> · ${p.n} ${p.semanal?'semana(s)':'días'}</div>
+     <button class="btn" style="margin-top:8px;width:100%" onclick="verCuotas(${p.id})">📋 Ver cuotas</button>
+   </div>`;
+ }).join('');
+}
+
+function renderHistorial(){
+ const input=document.getElementById('buscarHistorial');
+ const q=(input?.value||'').trim().toLowerCase();
+ const pagos=db.pagos.map(x=>{
+   const c=cliente(x.clienteId);
+   return {...x, nombre:c?.nombre||'Cliente eliminado', dni:c?.dni||''};
+ }).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+ if(q){
+   const encontrados=pagos.filter(x=>x.nombre.toLowerCase().includes(q)||String(x.dni).toLowerCase().includes(q));
+   historialList.innerHTML=encontrados.length?encontrados.map(x=>`<div class="row"><div><b>${x.nombre}</b><div class="small">${x.fecha} · Pago recibido</div></div><b class="success">+ ${money(x.monto)}</b></div>`).join(''):`<div class="row">No se encontraron pagos para «${q}».</div>`;
+   return;
+ }
+ const movimientos=[...pagos.map(x=>({fecha:x.fecha,tipo:'cobro',monto:x.monto,detalle:x.nombre})),...db.movimientosCapital.map(x=>({fecha:x.fecha,tipo:x.tipo,monto:x.monto,detalle:x.concepto}))].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+ historialList.innerHTML=movimientos.slice(0,30).map(x=>{
+   if(x.tipo==='ingreso')return `<div class="row"><div><b>Ingreso de capital</b><div class="small">${x.fecha} · ${x.detalle}</div></div><b style="color:#078453">+ ${money(x.monto)}</b></div>`;
+   if(x.tipo==='retiro')return `<div class="row"><div><b>Retiro / gasto</b><div class="small">${x.fecha} · ${x.detalle}</div></div><b style="color:#c52b44">− ${money(x.monto)}</b></div>`;
+   return `<div class="row"><div><b>${x.detalle}</b><div class="small">${x.fecha} · Cobro</div></div><b class="success">+ ${money(x.monto)}</b></div>`;
+ }).join('')||'<div class="row">Sin movimientos.</div>';
+}
+
+function diasEntreFechas(fechaAnterior,fechaActual){
+ const a=String(fechaAnterior||'').split('-').map(Number), b=String(fechaActual||'').split('-').map(Number);
+ if(a.length!==3||b.length!==3||!a[0]||!b[0])return 0;
+ return Math.max(0,Math.floor((Date.UTC(b[0],b[1]-1,b[2])-Date.UTC(a[0],a[1]-1,a[2]))/86400000));
+}
+function resumenEstadoCliente(c,hoy=dateStr(new Date())){
+ const prestamos=db.prestamos.filter(p=>p.clienteId===c.id&&Number(p.pendiente||0)>0.005);
+ const cuotasVencidas=prestamos.flatMap(p=>(p.cuotas||[]).filter(q=>q.fecha<hoy&&Number(q.pagado||0)<Number(q.monto||0)-0.005));
+ if(!prestamos.length)return {cliente:c,estado:'sinCredito',dias:0,saldoVencido:0};
+ if(!cuotasVencidas.length)return {cliente:c,estado:'alDia',dias:0,saldoVencido:0};
+ const fechaMasAntigua=cuotasVencidas.reduce((min,q)=>!min||q.fecha<min?q.fecha:min,'');
+ const dias=diasEntreFechas(fechaMasAntigua,hoy);
+ const saldoVencido=cuotasVencidas.reduce((sum,q)=>sum+Math.max(0,Number(q.monto||0)-Number(q.pagado||0)),0);
+ return {cliente:c,estado:dias>=4?'mora':'atrasados',dias,saldoVencido,fecha:fechaMasAntigua};
+}
+function abrirEstadoClientes(tipo){
+ estadoClientesFiltro=tipo;
+ show('estadoClientes',{key:'estadoClientes:'+tipo});
+}
+let estadoClientesFiltro='todos';
+function renderEstadoClientes(){
+ const titulo=document.getElementById('tituloEstadoClientes');
+ const subtitulo=document.getElementById('subtituloEstadoClientes');
+ const lista=document.getElementById('listaEstadoClientes');
+ if(!titulo||!subtitulo||!lista)return;
+ const titulos={activos:'Clientes activos',todos:'Todos los clientes',alDia:'Clientes al día',atrasados:'Clientes atrasados',mora:'Clientes en mora'};
+ const descripciones={activos:'Clientes con al menos un crédito activo y saldo pendiente.',todos:'Listado completo de clientes registrados.',alDia:'Sin cuotas vencidas en sus créditos activos.',atrasados:'Tienen cuotas pendientes con 1 a 3 días de atraso.',mora:'Tienen al menos una cuota pendiente con 4 días o más de atraso.'};
+ titulo.textContent=titulos[estadoClientesFiltro]||titulos.todos;
+ subtitulo.textContent=descripciones[estadoClientesFiltro]||descripciones.todos;
+ const datos=db.clientes.map(c=>resumenEstadoCliente(c)).filter(x=>estadoClientesFiltro==='todos'?true:estadoClientesFiltro==='activos'?x.estado!=='sinCredito':estadoClientesFiltro==='alDia'?x.estado==='alDia':x.estado===estadoClientesFiltro);
+ datos.sort((a,b)=>b.dias-a.dias||a.cliente.nombre.localeCompare(b.cliente.nombre,'es'));
+ lista.innerHTML=datos.length?datos.map(x=>{
+   const c=x.cliente;
+   const detalle=x.estado==='mora'||x.estado==='atrasados'?`${x.dias} día(s) de atraso · Vencido: ${money(x.saldoVencido)}`:x.estado==='alDia'?'Sin cuotas vencidas':'Sin crédito activo';
+   const color=x.estado==='mora'?'#c62838':x.estado==='atrasados'?'#c47a00':x.estado==='alDia'?'#078453':'#64748b';
+   return `<div class="row" style="display:flex;align-items:center;justify-content:space-between;gap:9px;cursor:pointer" onclick="verCliente(${c.id})">
+     <div style="min-width:0;flex:1"><b>${c.nombre}</b><div class="small">${c.tel||'Sin teléfono'} · ${c.distrito||'Sin distrito'}</div><div class="small" style="color:${color};font-weight:600">${detalle}</div></div>
+     <button type="button" class="btn" title="Abrir WhatsApp" aria-label="Abrir WhatsApp" style="padding:5px 7px;min-width:34px;background:#e9f8ef;color:#168b48;border:1px solid #b9e7c9" onclick="event.stopPropagation();abrirWhatsApp(cliente(${c.id}))"><svg viewBox="0 0 32 32" width="19" height="19" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16 3.2A12.5 12.5 0 0 0 5.3 22.2L3.7 28l6-1.6A12.5 12.5 0 1 0 16 3.2Zm0 22.7a10.1 10.1 0 0 1-5.1-1.4l-.4-.2-3.5.9.9-3.4-.2-.4A10.1 10.1 0 1 1 16 25.9Zm5.6-7.6c-.3-.2-1.8-.9-2.1-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7.1a8.2 8.2 0 0 1-2.4-1.5 9 9 0 0 1-1.7-2.1c-.2-.3 0-.5.1-.7l.5-.6.2-.5c.1-.2 0-.4 0-.6s-.7-1.7-1-2.3c-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4s-1.2 1.2-1.2 2.8 1.2 3.2 1.4 3.4a11.5 11.5 0 0 0 4.4 4c.6.3 1.1.5 1.5.6.6.2 1.2.2 1.6.1.5-.1 1.8-.7 2.1-1.4.3-.7.3-1.3.2-1.4s-.2-.2-.5-.4Z"/></svg></button>
+   </div>`;
+ }).join(''):'<div class="row">No hay clientes en esta categoría.</div>';
+}
+
+function render(){
+ let totalPrest=db.prestamos.reduce((s,p)=>s+p.capital,0), pend=db.prestamos.reduce((s,p)=>s+p.pendiente,0);
+ let today=dateStr(new Date()), hoy=db.pagos.filter(x=>x.fecha===today).reduce((s,x)=>s+x.monto,0);
+ let metaHoy=db.prestamos.reduce((s,p)=>s+p.cuotas.filter(q=>q.fecha===today).reduce((a,q)=>a+Math.max(0,q.monto-q.pagado),0),0);
+
+ // Clasificación por cliente: 1 a 3 días de atraso = Atrasado;
+ // 4 días o más = En mora. Se toma la cuota pendiente más antigua
+ // de cualquiera de sus créditos activos para asignar el nivel más grave.
+ let saldoMora=0;
+ const resumenEstados=db.clientes.map(c=>resumenEstadoCliente(c,today));
+ const clientesAtrasados=resumenEstados.filter(x=>x.estado==='atrasados');
+ const clientesMora=resumenEstados.filter(x=>x.estado==='mora');
+ const clientesDia=resumenEstados.filter(x=>x.estado==='alDia').length;
+ db.prestamos.forEach(p=>p.cuotas.forEach(q=>{
+   if(q.fecha<today && Number(q.pagado||0)<Number(q.monto||0)-0.005)
+     saldoMora += Math.max(0,Number(q.monto||0)-Number(q.pagado||0));
+ }));
+
+ capital.textContent=money(db.capital);
+ document.getElementById('metaHoy').textContent=money(metaHoy);
+ pendiente.textContent=money(pend);
+ let valorRuta=+(db.capital+pend);
+ document.getElementById('rutaCaja').textContent=money(db.capital);
+ document.getElementById('rutaCreditos').textContent=money(pend);
+ document.getElementById('valorRuta').textContent=money(valorRuta);
+ document.getElementById('hoy').textContent=money(hoy);
+ const historicoEl=document.getElementById('historicoPrestado');
+ if(historicoEl){
+   historicoEl.textContent=money(totalPrest);
+   const activos=db.prestamos.filter(p=>p.pendiente>0.005);
+   const terminados=db.prestamos.filter(p=>p.pendiente<=0.005);
+   document.getElementById('historicoDetalle').textContent=`${db.prestamos.length} crédito(s) registrados · ${activos.length} activo(s) · ${terminados.length} terminado(s). Este dato es histórico y no modifica ni recalcula tus préstamos.`;
+ }
+ const moraCapital=document.getElementById('saldoMoraCapital'); if(moraCapital)moraCapital.textContent=money(saldoMora);
+ document.getElementById('totalClientes').textContent=resumenEstados.filter(x=>x.estado!=='sinCredito').length;
+ document.getElementById('clientesDia').textContent=clientesDia;
+ document.getElementById('clientesAtrasados').textContent=clientesAtrasados.length;
+ document.getElementById('creditosMora').textContent=clientesMora.length;
+
+ renderClientes();
+ renderEstadoClientes();
+ renderZonas();
+ renderCreditosHoy();
+ renderCobrosHoyInicio();
+ renderCobrosClientes();
+ renderHistorial();
+ reportesBox.innerHTML=`<b>Resumen</b><p>Clientes: ${db.clientes.length}</p><p>Préstamos activos: ${db.prestamos.filter(p=>p.pendiente>0).length}</p><p>Préstamos terminados: ${db.prestamos.filter(p=>p.pendiente<=0.005).length}</p><p>Capital disponible: <b>${money(db.capital)}</b></p><p>Total pendiente: <b>${money(pend)}</b></p>`;
+}
+function estadoCredito(p, hoy=dateStr(new Date())){
+ const cuotas=Array.isArray(p.cuotas)?p.cuotas:[];
+ const pendientes=cuotas.filter(q=>Number(q.pagado||0)<Number(q.monto||0)-0.005);
+ if(!pendientes.length || Number(p.pendiente||0)<=0.005) return {tipo:'terminado',texto:'Terminado',clase:'paid'};
+ const ultimaFecha=cuotas.reduce((max,q)=>q.fecha>max?q.fecha:max,'');
+ if(ultimaFecha && hoy>ultimaFecha) return {tipo:'vencido',texto:'Crédito vencido',clase:'late',fecha:ultimaFecha};
+ const atrasadas=pendientes.filter(q=>q.fecha<hoy);
+ if(atrasadas.length) return {tipo:'atrasado',texto:'Atrasado',clase:'late',atrasadas:atrasadas.length};
+ return {tipo:'vigente',texto:'Vigente',clase:'pending'};
+}
+
+function renderClientes(){
+ let q=(document.getElementById('buscarCliente')?.value||'').trim().toLowerCase();
+ // Mostrar únicamente clientes que conservan al menos un crédito con saldo pendiente.
+ // Los clientes históricos o sin créditos activos permanecen guardados, pero no aparecen en esta cartera.
+ let list=db.clientes.filter(c=>
+   c.nombre.toLowerCase().includes(q) &&
+   db.prestamos.some(p=>p.clienteId===c.id && Number(p.pendiente||0)>0.005)
+ );
+ listaClientes.innerHTML=list.length?list.map(c=>{
+   let activos=db.prestamos.filter(p=>p.clienteId===c.id&&p.pendiente>0).length;
+   return `<div class="row" style="cursor:pointer" onclick="verCliente(${c.id})">
+     <div><b>${c.nombre}</b><div class="small">DNI: ${c.dni||'—'} · ${c.tel||'Sin teléfono'} · ${c.distrito||'Sin distrito'}</div>
+     <div class="small">${c.dir||''}</div></div>
+     <div style="display:flex;align-items:center;gap:6px">
+       <span>${activos} activo(s)</span>
+       <button class="btn" style="padding:6px 8px" onclick="event.stopPropagation();editarCliente(${c.id})">✏️</button>
+     </div>
+   </div>`;
+ }).join(''):'<div class="row">No se encontraron clientes.</div>';
+}
+
+function renderZonas(){
+ const box=document.getElementById('listaZonas'); if(!box)return;
+ const grupos={};
+ db.clientes.forEach(c=>{
+   const distrito=(c.distrito||'Sin distrito').trim()||'Sin distrito';
+   if(!grupos[distrito])grupos[distrito]={clientes:[],creditos:0,saldo:0};
+   grupos[distrito].clientes.push(c);
+   db.prestamos.filter(p=>p.clienteId===c.id&&p.pendiente>0.005).forEach(p=>{grupos[distrito].creditos++;grupos[distrito].saldo+=Number(p.pendiente||0);});
+ });
+ const nombres=Object.keys(grupos).sort((a,b)=>a.localeCompare(b,'es'));
+ box.innerHTML=nombres.length?nombres.map(d=>{
+   const g=grupos[d];
+   return `<button type="button" class="row" style="width:100%;text-align:left;border:0;cursor:pointer;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px" onclick='abrirZona(${JSON.stringify(d)})'>
+     <div><b>📍 ${d}</b><div class="small">${g.clientes.length} cliente(s) · ${g.creditos} crédito(s) activo(s)</div></div>
+     <div style="text-align:right"><b>${money(g.saldo)}</b><div class="small">Ver clientes ›</div></div>
+   </button>`;
+ }).join(''):'<div class="row">Aún no hay clientes con distrito registrado.</div>';
+}
+function abrirZona(distrito){
+ const hoy=dateStr(new Date());
+ const clientes=db.clientes.filter(c=>(c.distrito||'Sin distrito').trim()===distrito);
+ const pendientes=[];
+ clientes.forEach(c=>{
+   const cuotasHoy=[];
+   db.prestamos.filter(p=>p.clienteId===c.id&&p.pendiente>0.005).forEach(p=>{
+     p.cuotas.forEach(q=>{
+       if(q.fecha===hoy && Math.max(0,q.monto-q.pagado)>0.005){
+         cuotasHoy.push({p,q,falta:Math.max(0,q.monto-q.pagado)});
+       }
+     });
+   });
+   if(cuotasHoy.length) pendientes.push({c,cuotas:cuotasHoy,saldo:cuotasHoy.reduce((s,x)=>s+x.falta,0)});
+ });
+ const rows=pendientes.map(x=>{
+   const tipos=[...new Set(x.cuotas.map(y=>y.p.semanal?'Semanal':'Diario'))].join(' + ');
+   return `<div class="row" style="display:flex;align-items:center;gap:10px">\n     <div style="flex:1;cursor:pointer" onclick="verCliente(${x.c.id})">\n       <b>${x.c.nombre}</b>\n       <div class="small">${tipos} · ${x.cuotas.length} cuota(s) para hoy</div>\n       <div class="small">Pendiente de hoy: ${money(x.saldo)}</div>\n     </div>\n     <button type="button" class="btn success" style="padding:8px 10px" onclick='event.stopPropagation();cobrarDesdeZona(${x.c.id},${JSON.stringify(distrito)})'>💰 Cobrar</button>\n   </div>`;
+ }).join('');
+ const contenido=rows||'<div class="row"><b>🎉 No hay clientes pendientes de cobro en esta zona para hoy.</b><div class="small" style="margin-top:4px">Cuando una cuota queda totalmente pagada, el cliente sale automáticamente de esta ruta.</div></div>';
+ const modal=document.createElement('div'); modal.className='modal';
+ modal.innerHTML=`<div class="modalBox"><h3>📍 ${distrito}</h3><div class="small" style="margin-bottom:10px">Ruta de cobro · ${hoy} · ${pendientes.length} cliente(s) pendiente(s)</div>${contenido}<button type="button" class="btn" style="width:100%;margin-top:12px" onclick="this.closest('.modal').remove()">Cerrar</button></div>`;
+ document.body.appendChild(modal);
+}
+
+function cobrarDesdeZona(clienteId,distrito){
+ clienteActualId=clienteId;
+ const anterior=document.querySelector('.modal:last-of-type');
+ if(anterior)anterior.remove();
+ cobrarCliente();
+ // Al terminar un cobro, volver a abrir la zona permite que la lista se actualice
+ // y desaparezca automáticamente el cliente si ya no tiene cuotas pendientes hoy.
+ setTimeout(()=>abrirZona(distrito),250);
+}
+
+let clienteActualId=null;
+let creditoActualId=null;
+// Navegación interna: conserva la pantalla anterior al usar Atrás del teléfono.
+let appPendingNavKey=null;
+let appRestoringHistory=false;
+let appCurrentNavKey='inicio';
+function appNavState(section,key){return {miAgenda:true,section,key,clienteId:clienteActualId,creditoId:creditoActualId};}
+function restaurarNavegacionApp(state){
+ if(!state || !state.miAgenda){show('inicio',{fromPop:true,key:'inicio'});return;}
+ appRestoringHistory=true;
+ try{
+   if(state.key && String(state.key).startsWith('credit:')) verCuotas(Number(state.creditoId||String(state.key).split(':')[1]));
+   else if(state.key && String(state.key).startsWith('client:')) verCliente(Number(state.clienteId||String(state.key).split(':')[1]));
+   else show(state.section||'inicio',{fromPop:true,key:state.key||state.section||'inicio'});
+ }finally{appRestoringHistory=false;}
+}
+window.addEventListener('popstate',e=>restaurarNavegacionApp(e.state));
+history.replaceState(appNavState('inicio','inicio'),'',location.href);
+appCurrentNavKey='inicio';
+
+function verCliente(id){
+ clienteActualId=id;
+ creditoActualId=null;
+ let c=cliente(id);
+ detalleNombre.textContent=c.nombre;
+ let ps=db.prestamos.filter(p=>p.clienteId===id);
+ let activos=ps.filter(p=>Number(p.pendiente||0)>0.005);
+ let terminados=ps.filter(p=>Number(p.pendiente||0)<=0.005);
+ let saldo=activos.reduce((s,p)=>s+Number(p.pendiente||0),0);
+ saldoDetalle.textContent=money(saldo);
+ btnCobrarCliente.disabled=saldo<=0.005;
+ btnCobrarCliente.style.opacity=saldo<=0.005?'0.5':'1';
+ detalleDatos.innerHTML=`<b>DNI / Identificación:</b> ${c.dni||'—'}<br><b>Teléfono:</b> ${c.tel||'—'}<br><b>Dirección exacta:</b> ${c.dir||'—'}<br><b>Barrio / Distrito:</b> ${c.distrito||'—'}`;
+ mostrarTabCredito('cuotas');
+ const tarjetaCredito=p=>{
+   let abiertas=p.cuotas.filter(q=>Number(q.pagado||0)<Number(q.monto||0)-0.005);
+   const estado=estadoCredito(p);
+   const detalleEstado=estado.tipo==='vencido' ? ` · Venció el ${fmtFecha(estado.fecha)}` : (estado.tipo==='atrasado' ? ` · ${estado.atrasadas} cuota(s) atrasada(s)` : '');
+   return `<div class="row"><div><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><b>Préstamo ${money(p.capital)} · ${p.pct}%</b><span class="badge ${estado.clase}">${estado.texto}</span></div>
+     <div class="small">${p.semanal?'Semanal':'Diario'} · ${p.n} ${p.semanal?'semana(s)':'días'} · Pendiente ${money(p.pendiente)}${detalleEstado}</div>
+     <div class="small">📅 Creado: ${fmtFecha(p.inicio)||'—'} · ${abiertas.length} cuota(s) pendiente(s)</div></div>
+     <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+       <button class="btn success" onclick="abonarCredito(${p.id})">💵 Abonar</button>
+       <button class="btn" style="padding:0;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;font-size:18px" title="Ver detalle" aria-label="Ver detalle" onclick="verCuotas(${p.id})">📋</button>
+       <button class="btn" style="padding:0;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;font-size:18px" title="Editar crédito" aria-label="Editar crédito" onclick="editarCredito(${p.id})">✏️</button>
+       <button class="btn" style="padding:0;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;border:1px solid #f0b8be;color:#c62838;background:#fff5f6" title="Eliminar crédito" aria-label="Eliminar crédito" onclick="eliminarCredito(${p.id})">🗑️</button>
+     </div></div>`;
+ };
+ let html=activos.length?activos.map(tarjetaCredito).join(''):'<div class="row"><b>✅ No hay créditos activos.</b><div class="small">Este cliente está al día. Puedes crearle un nuevo crédito con el botón PRESTAR.</div></div>';
+ if(terminados.length){
+   html+=`<details style="margin-top:10px;background:#f7f8fc;border:1px solid #e1e5ef;border-radius:16px;padding:10px 12px">
+     <summary style="cursor:pointer;font-weight:800;color:#475569">📚 Historial de créditos terminados (${terminados.length})</summary>
+     <div style="margin-top:8px">${terminados.map(tarjetaCredito).join('')}</div>
+   </details>`;
+ }
+ detallePrestamos.innerHTML=html;
+ document.getElementById('panelAbonos').hidden=true;
+ document.getElementById('panelCuotas').hidden=true;
+ document.getElementById('tablaAbonos').innerHTML='';
+ document.getElementById('listaCuotas').innerHTML='';
+ appPendingNavKey='client:'+id;
+ show('clienteDetalle');
+}
+
+function editarCliente(id){
+ clienteActualId=id;
+ editarClienteActual();
+}
+
+function editarClienteActual(){
+ if(clienteActualId===null)return;
+ let c=cliente(clienteActualId);
+ enombre.value=c.nombre||'';
+ edni.value=c.dni||'';
+ etel.value=c.tel||'';
+ edir.value=c.dir||'';
+ edistrito.value=c.distrito||'';
+ show('editarCliente');
+}
+function guardarEdicionCliente(e){
+ e.preventDefault();
+ if(clienteActualId===null)return;
+ let c=db.clientes.find(x=>x.id===clienteActualId);
+ if(!c)return;
+ c.nombre=enombre.value;
+ c.dni=edni.value;
+ c.tel=etel.value;
+ c.dir=edir.value;
+ c.distrito=edistrito.value;
+ save();
+ verCliente(clienteActualId);
+}
+function eliminarClienteActual(){
+ if(clienteActualId===null)return;
+ let c=cliente(clienteActualId);
+ if(!c || !c.id)return;
+ let ps=db.prestamos.filter(p=>p.clienteId===clienteActualId);
+ let pendientes=ps.filter(p=>Number(p.pendiente||0)>0.005);
+ let saldoPendiente=pendientes.reduce((s,p)=>s+Number(p.pendiente||0),0);
+
+ // Si existen créditos pendientes, primero se pide confirmación, pero aun
+ // confirmando NO se permite borrar al cliente para evitar perder una deuda.
+ if(pendientes.length){
+   const confirma=confirm(
+     `⚠️ Este cliente tiene créditos pendientes.\n\n`+
+     `Créditos pendientes: ${pendientes.length}\n`+
+     `Saldo pendiente: ${money(saldoPendiente)}\n\n`+
+     `¿Realmente deseas eliminar al cliente?\n\n`+
+     `Si eliges Aceptar, la eliminación seguirá bloqueada hasta que los créditos estén saldados.`
+   );
+   if(confirma){
+     alert('El cliente NO fue eliminado porque todavía tiene créditos pendientes. Primero debes saldar esos créditos.');
+   }
+   return;
+ }
+
+ // Si no hay créditos pendientes (incluye clientes sin créditos o con todos
+ // los créditos ya terminados), sí se permite eliminar después de confirmar.
+ const confirma=confirm(
+   `¿Deseas eliminar definitivamente a ${c.nombre}?\n\n`+
+   `Este cliente no tiene créditos pendientes.\n`+
+   `También se eliminarán sus créditos terminados y su historial de abonos.\n\n`+
+   `¿Sí o No?`
+ );
+ if(!confirma)return;
+
+ const ids=new Set(ps.map(p=>p.id));
+ db.pagos=db.pagos.filter(x=>x.clienteId!==clienteActualId && !ids.has(x.pid));
+ db.prestamos=db.prestamos.filter(p=>p.clienteId!==clienteActualId);
+ db.clientes=db.clientes.filter(x=>x.id!==clienteActualId);
+ clienteActualId=null; creditoActualId=null;
+ save();
+ show('clientes');
+ alert('Cliente eliminado correctamente.');
+}
+
+function eliminarCredito(pid){
+ let p=db.prestamos.find(x=>x.id===pid);
+ if(!p)return;
+ let c=cliente(p.clienteId);
+ let pagosCredito=db.pagos.filter(x=>x.pid===pid);
+ let cobrado=pagosCredito.reduce((s,x)=>s+Number(x.monto||0),0);
+ let texto=`¿Eliminar definitivamente este crédito?\n\nCliente: ${c.nombre}\nCapital: ${money(p.capital)}\nPagado aplicado: ${money(cobrado)}\nSaldo actual: ${money(p.pendiente)}\n\nSe eliminarán también las cuotas y el historial de abonos de este crédito. Esta acción no se puede deshacer.`;
+ if(!confirm(texto))return;
+ // Revertir el efecto financiero de este crédito: devuelve a capital lo que salió
+ // menos lo que realmente fue aplicado como cobro a este crédito.
+ db.capital=+(db.capital + p.capital - cobrado);
+ db.pagos=db.pagos.filter(x=>x.pid!==pid);
+ db.prestamos=db.prestamos.filter(x=>x.id!==pid);
+ creditoActualId=null;
+ save();
+ verCliente(p.clienteId);
+ alert('Crédito eliminado correctamente. El capital disponible fue actualizado.');
+}
+
+function editarCredito(pid){
+ const p=db.prestamos.find(x=>x.id===pid); if(!p)return;
+ const c=cliente(p.clienteId);
+ const pagosAplicados=(p.cuotas||[]).reduce((s,q)=>s+Number(q.pagado||0),0);
+ const capitalTxt=prompt(`EDITAR CRÉDITO · ${c.nombre}\n\nCapital prestado (S/):`,String(p.capital));
+ if(capitalTxt===null)return;
+ const nuevoCapital=Math.round(Number(capitalTxt));
+ if(!(nuevoCapital>0)){alert('El capital debe ser mayor que cero.');return;}
+ const pctTxt=prompt('Porcentaje de interés (0, 5, 10, 15 o 20):',String(p.pct||0));
+ if(pctTxt===null)return;
+ const nuevoPct=Number(pctTxt);
+ if(![0,5,10,15,20].includes(nuevoPct)){alert('Selecciona un interés válido: 0, 5, 10, 15 o 20%.');return;}
+ const modalidadActual=p.semanal?String(Math.min(4,Math.max(1,Number(p.n)||1))):String(p.n);
+ const modalidadTxt=prompt('Cantidad de cuotas: escribe 24 o 30 para diario, o 1, 2, 3 o 4 para semanal.',modalidadActual);
+ if(modalidadTxt===null)return;
+ const nuevoN=Number(modalidadTxt);
+ const nuevaSemanal=[1,2,3,4].includes(nuevoN);
+ if(!(nuevaSemanal||[24,30].includes(nuevoN))){alert('Cantidad no válida. Usa 24 o 30 cuotas diarias, o de 1 a 4 cuotas semanales.');return;}
+ const inicioTxt=prompt('Fecha de creación (AAAA-MM-DD):',String(p.inicio||dateStr(new Date())));
+ if(inicioTxt===null)return;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(inicioTxt)||isNaN(new Date(inicioTxt+'T00:00:00').getTime())){alert('La fecha de creación no es válida.');return;}
+ const primeraPendiente=(p.cuotas||[]).find(q=>Number(q.pagado||0)<Number(q.monto||0)-0.005);
+ const fechaBase=primeraPendiente?.fecha||dateStr(new Date());
+ const primeraTxt=prompt('Fecha de la próxima cuota pendiente (AAAA-MM-DD):',fechaBase);
+ if(primeraTxt===null)return;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(primeraTxt)||isNaN(new Date(primeraTxt+'T00:00:00').getTime())||new Date(primeraTxt+'T00:00:00').getDay()===0){alert('La fecha de la próxima cuota no es válida. No puede ser domingo.');return;}
+ const cuotasAnteriores=(p.cuotas||[]).filter(q=>Number(q.pagado||0)>0.005).map(q=>({...q}));
+ if(nuevoN<cuotasAnteriores.length){alert(`No puedes reducir el crédito a ${nuevoN} cuotas porque ya existen ${cuotasAnteriores.length} cuotas con pagos registrados. El historial se conservará.`);return;}
+ const totalCalculado=Math.round(nuevoCapital*(1+nuevoPct/100));
+ const totalHistorico=cuotasAnteriores.reduce((s,q)=>s+Number(q.monto||0),0);
+ const totalNuevo=Math.max(totalCalculado,totalHistorico,Math.round(pagosAplicados));
+ const capitalAdicional=nuevoCapital-Number(p.capital||0);
+ if(capitalAdicional>Number(db.capital||0)+0.005){alert(`No hay capital suficiente para aumentar este préstamo.\n\nCapital disponible: ${money(db.capital)}\nAumento solicitado: ${money(capitalAdicional)}`);return;}
+ if(!confirm(`Se actualizará únicamente el crédito de ${c.nombre}.\n\nCapital: ${money(p.capital)} → ${money(nuevoCapital)}\nInterés: ${p.pct}% → ${nuevoPct}%\nCuotas: ${p.n} → ${nuevoN}\n\nLos abonos registrados se conservarán. Las cuotas ya pagadas o abonadas no se modificarán; se recalcularán las cuotas pendientes. ¿Continuar?`))return;
+ db.capital=Number(db.capital||0)-capitalAdicional;
+ const cantidadNuevas=nuevoN-cuotasAnteriores.length;
+ const saldoNuevo=Math.max(0,totalNuevo-totalHistorico);
+ const cuotaBase=cantidadNuevas>0?Math.floor(saldoNuevo/cantidadNuevas):0;
+ const nuevasCuotas=[];
+ let d=new Date(primeraTxt+'T00:00:00');
+ for(let i=0;i<cantidadNuevas;i++){
+   while(d.getDay()===0)d.setDate(d.getDate()+1);
+   const monto=i===cantidadNuevas-1?saldoNuevo-cuotaBase*(cantidadNuevas-1):cuotaBase;
+   nuevasCuotas.push({i:cuotasAnteriores.length+i+1,fecha:dateStr(d),monto,pagado:0,estado:'pendiente'});
+   d=nuevaSemanal?addDays(d,7):nextCobro(d);
+ }
+ p.capital=nuevoCapital; p.pct=nuevoPct; p.n=nuevoN; p.semanal=nuevaSemanal;
+ p.inicio=inicioTxt; p.total=totalNuevo; p.cuota=cantidadNuevas?cuotaBase:0;
+ p.cuotas=[...cuotasAnteriores,...nuevasCuotas];
+ p.cuotas.forEach((q,i)=>{q.i=i+1; q.estado=Number(q.pagado||0)>=Number(q.monto||0)-0.005?'pagado':Number(q.pagado||0)>0?'parcial':'pendiente';});
+ p.pendiente=+p.cuotas.reduce((sum,q)=>sum+Math.max(0,Number(q.monto||0)-Number(q.pagado||0)),0);
+ save();
+ verCliente(p.clienteId);
+ alert('Crédito actualizado. Los abonos históricos se conservaron y solo se recalcularon las cuotas pendientes.');
+}
+
+function abrirNotificaciones(){
+ if(clienteActualId===null)return;
+ document.getElementById('notificacionesModal').style.display='flex';
+}
+function cerrarNotificaciones(){
+ document.getElementById('notificacionesModal').style.display='none';
+}
+function cobrarCredito(pid,modo='abono'){
+ let p=db.prestamos.find(x=>x.id===pid);
+ if(!p)return;
+ if(p.pendiente<=0.005){alert('Este crédito ya está pagado.');return;}
+ let c=cliente(p.clienteId);
+ let val=prompt(`${modo==='abono'?'Abono':'Pago'} de ${c.nombre}\nSaldo de ESTE crédito: ${money(p.pendiente)}\n\nEscribe el monto REAL que entrega el cliente:`, '');
+ if(val===null)return;
+ val=Math.round(+val);
+ if(!(val>0))return;
+ let recibido=Math.min(val,p.pendiente), restante=recibido, aplicado=0;
+ for(let q of p.cuotas){
+   if(restante<=0.005)break;
+   let falta=Math.max(0,q.monto-q.pagado);
+   if(falta<=0.005)continue;
+   let usar=Math.min(restante,falta);
+   q.pagado=+(q.pagado+usar);
+   q.estado=q.pagado>=q.monto-0.005?'pagado':'parcial';
+   restante=+(restante-usar);
+   aplicado=+(aplicado+usar);
+ }
+ p.pendiente=+(p.cuotas.reduce((s,x)=>s+Math.max(0,x.monto-x.pagado),0));
+ db.capital+=aplicado;
+ db.pagos.push({id:Date.now(),fecha:dateStr(new Date()),clienteId:p.clienteId,monto:aplicado,recibido:aplicado,pid:p.id,cuotaInicial:1,creditoDirecto:true});
+ marcarCobroAtendido(p.clienteId);
+ save();
+ let fechaPago=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
+ let mensaje=`Hola ${c.nombre}, recibimos tu pago de ${money(aplicado)} con fecha ${fechaPago}. El saldo pendiente de este crédito es de ${money(p.pendiente)}. Gracias.`;
+ document.getElementById('pagoResultadoTexto').innerHTML=
+   `<p><b>Crédito:</b> ${p.semanal?'Semanal':'Diario'} · ${p.n} ${p.semanal?'semana(s)':'días'}</p>
+    <p><b>Pago recibido:</b> ${money(aplicado)}</p>
+    <p><b>Saldo de este crédito:</b> <strong>${money(p.pendiente)}</strong></p>
+    <p class="small">Fecha: ${fechaPago}</p>`;
+ document.getElementById('btnEnviarSaldo').onclick=()=>{
+   let telefono=(c.tel||'').replace(/\D/g,'');
+   if(!telefono.length){alert('Este cliente no tiene un número de teléfono registrado.');return;}
+   let numero=telefono.startsWith('51')?telefono:'51'+telefono;
+   window.open('https://wa.me/'+numero+'?text='+encodeURIComponent(mensaje),'_blank');
+ };
+ document.getElementById('pagoResultado').style.display='flex';
+ creditoActualId=p.id;
+ verCuotas(p.id);
+}
+
+function abonarCredito(pid){
+ // Abono libre: permite registrar cualquier importe y lo aplica solo a las cuotas pendientes de este crédito.
+ cobrarCredito(pid,'abono');
+}
+
+function abrirNotificacionesCredito(pid){
+ creditoActualId=pid;
+ document.getElementById('notificacionesModal').style.display='flex';
+}
+
+function enviarNotificacion(tipo){
+ let c=cliente(clienteActualId);
+ let p=creditoActualId ? db.prestamos.find(x=>x.id===creditoActualId) : null;
+ if(!p){
+   // Client-level notifications remain available from the client profile.
+   let ps=db.prestamos.filter(x=>x.clienteId===clienteActualId && x.pendiente>0.005);
+   let saldo=ps.reduce((s,x)=>s+x.pendiente,0);
+   let fecha=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
+   let mensaje;
+   if(tipo==='saldo') mensaje=`Hola ${c.nombre}, te informamos que tu saldo pendiente al ${fecha} es de ${money(saldo)}. Gracias.`;
+   else if(tipo==='semanal') mensaje=`Hola ${c.nombre}, te recordamos que tienes un pago pendiente correspondiente a tu crédito. Por favor, realiza tu pago semanal en la fecha acordada. Tu saldo pendiente es de ${money(saldo)}. Gracias.`;
+   else if(tipo==='atraso'){
+     const cuotasAtrasadas=ps.reduce((n,pr)=>n+pr.cuotas.filter(q=>Number(q.pagado||0)<Number(q.monto||0)-0.005 && q.fecha<dateStr(new Date())).length,0);
+     mensaje=`Hola ${c.nombre}, registramos ${cuotasAtrasadas} cuota(s) de días anteriores que aún están pendientes. Tu saldo pendiente total es de ${money(saldo)}. Por favor, ponte al día. Fecha: ${fecha}. Gracias.`;
+   }else if(tipo==='vencimiento'){
+     const proximo=ps.map(pr=>pr.cuotas[pr.cuotas.length-1]).filter(Boolean).sort((a,b)=>a.fecha.localeCompare(b.fecha))[0];
+     mensaje=proximo?`Hola ${c.nombre}, te recordamos que la fecha de vencimiento de uno de tus créditos es el ${proximo.fecha}. Tu saldo pendiente total es de ${money(saldo)}. Te recomendamos completar el pago antes de esa fecha. Gracias.`:`Hola ${c.nombre}, tienes un saldo pendiente total de ${money(saldo)}. Consulta la fecha de vencimiento de tu crédito. Gracias.`;
+   }else mensaje=`Hola ${c.nombre}, tienes un saldo pendiente de ${money(saldo)}. Gracias.`;
+   return abrirWhatsApp(c,mensaje);
+ }
+ let saldo=p.pendiente;
+ let fecha=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
+ let atrasado=p.cuotas.some(q=>q.pagado<q.monto && q.fecha<dateStr(new Date()));
+ let tipoCredito=p.semanal?'crédito semanal':'crédito diario';
+ let mensaje='';
+ if(tipo==='vencimiento'){
+   let ultima=p.cuotas[p.cuotas.length-1];
+   if(!ultima){alert('Este crédito no tiene cuotas registradas.');return;}
+   mensaje=`Hola ${c.nombre}, te informamos que tu ${tipoCredito} está próximo a vencer. La fecha de vencimiento es ${ultima.fecha} y actualmente tienes un saldo pendiente de ${money(saldo)}. Por favor, verifica tu pago para completar el crédito. Gracias.`;
+}else if(tipo==='saldo'){
+   mensaje=`Hola ${c.nombre}, te informamos que tu saldo pendiente del ${tipoCredito} al ${fecha} es de ${money(saldo)}. Gracias.`;
+ }else if(tipo==='semanal'){
+   mensaje=`Hola ${c.nombre}, te recordamos que tienes un pago pendiente de tu ${tipoCredito}. Tu saldo pendiente es de ${money(saldo)}. Por favor, realiza tu pago en la fecha acordada. Gracias.`;
+ }else{
+   mensaje=`Hola ${c.nombre}, te informamos que tu ${tipoCredito} tiene un saldo pendiente de ${money(saldo)} y se encuentra atrasado. Por favor, ponte al día con tu pago. Fecha: ${fecha}. Gracias.`;
+ }
+ abrirWhatsApp(c,mensaje);
+ cerrarNotificaciones();
+}
+function abrirWhatsApp(c,mensaje){
+ let telefono=(c.tel||'').replace(/\D/g,'');
+ if(!telefono.length){alert('Este cliente no tiene un número de teléfono registrado.');return;}
+ let numero=telefono.startsWith('51')?telefono:'51'+telefono;
+ let url='https://wa.me/'+numero;
+ // Si se proporciona un mensaje desde otra función, se conserva el comportamiento anterior.
+ // Desde el inicio se abre el chat limpio para que David pueda elegir y enviar su sticker.
+ if(typeof mensaje==='string' && mensaje.length) url+='?text='+encodeURIComponent(mensaje);
+ window.open(url,'_blank');
+}
+
+
+function prestarACliente(){
+ if(clienteActualId===null)return;
+ document.getElementById('nuevo').querySelector('h2').textContent='Nuevo préstamo';
+ show('nuevo');
+ fillClientes();
+ pcliente.value=clienteActualId;
+} 
+
+function cobrarCliente(){
+ if(clienteActualId===null)return;
+ let ps=db.prestamos.filter(p=>p.clienteId===clienteActualId && p.pendiente>0.005);
+ if(!ps.length){alert('Este cliente no tiene saldo pendiente.');return;}
+ if(ps.length===1){verCuotas(ps[0].id);setTimeout(()=>abonarCredito(ps[0].id),0);return;}
+ const c=cliente(clienteActualId);
+ const opciones=ps.map((p,i)=>`${i+1}. ${p.semanal?'Semanal':'Diario'} · ${p.n} ${p.semanal?'semana(s)':'días'} · Creado ${fmtFecha(p.inicio)} · Saldo ${money(p.pendiente)}`).join('\n');
+ const eleccion=prompt(`El cliente ${c.nombre} tiene ${ps.length} créditos activos.\n\nSelecciona a cuál crédito aplicar el pago:\n\n${opciones}\n\nEscribe el número del crédito:`, '1');
+ if(eleccion===null)return;
+ const idx=Math.round(+eleccion)-1;
+ if(idx<0||idx>=ps.length)return alert('Selecciona un número de crédito válido.');
+ abonarCredito(ps[idx].id);
+}
+function cerrarPagoResultado(){
+ document.getElementById('pagoResultado').style.display='none';
+}
+
+function mostrarTabCredito(tab, pid){
+ // El historial y la lista de cuotas son apartados independientes desplegables.
+ if(tab==='abonos'){
+   const panel=document.getElementById('panelAbonos');
+   panel.open=true;
+   renderTablaAbonos(pid || creditoActualId);
+ }
+}
+function recalcularCreditoDesdeAbonos(pid){
+ let p=db.prestamos.find(x=>x.id===pid); if(!p)return 0;
+ p.cuotas.forEach(q=>{q.pagado=0;q.estado='pendiente';});
+ let pagos=db.pagos.filter(x=>x.pid===pid);
+ let totalAplicado=0;
+ pagos.forEach(pago=>{
+   let restante=Math.max(0,Number(pago.monto||0));
+   let inicio=Math.max(0,Number(pago.cuotaInicial||1)-1);
+   let aplicado=0;
+   for(let j=inicio;j<p.cuotas.length && restante>0.005;j++){
+     let q=p.cuotas[j], falta=Math.max(0,Number(q.monto||0)-Number(q.pagado||0));
+     if(falta<=0.005)continue;
+     let usar=Math.min(restante,falta);
+     q.pagado=+(Number(q.pagado||0)+usar);
+     q.estado=q.pagado>=Number(q.monto||0)-0.005?'pagado':'parcial';
+     restante=+(restante-usar);
+     aplicado=+(aplicado+usar);
+   }
+   pago.monto=aplicado;
+   totalAplicado=+(totalAplicado+aplicado);
+ });
+ p.total=+p.cuotas.reduce((s,q)=>s+Number(q.monto||0),0);
+ p.pendiente=+p.cuotas.reduce((s,q)=>s+Math.max(0,Number(q.monto||0)-Number(q.pagado||0)),0);
+ p.pagadas=p.cuotas.filter(q=>q.pagado>=q.monto-0.005).length;
+ return totalAplicado;
+}
+function editarCuota(pid,i){
+ let p=db.prestamos.find(x=>x.id===pid), q=p?.cuotas[i]; if(!p||!q)return;
+ let fecha=prompt(`Editar fecha de la cuota ${q.i}:`,q.fecha); if(fecha===null)return;
+ let montoVal=prompt(`Editar monto de la cuota ${q.i}:\n\nPued
